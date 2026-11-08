@@ -1,0 +1,15 @@
+project_id = "call-aid"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 100
+
+[db]
+port = 54322
+major_version = 17
+
+[studio]
+port = 54323
