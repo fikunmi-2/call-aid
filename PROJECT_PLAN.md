@@ -233,3 +233,5 @@ Check current official docs again when implementing:
 Changes from the original plan: remove authentication, ownership and scenario machinery; replace six data tables with two and transient evidence; replace general narratives with sanitized SBAR JSON; move a small Supabase admission slice and first hosted voice smoke test into milestone 1. These adjustments preserve immediate public access, trusted writes, validation, safe errors and budget protection without extra services.
 
 Current authorized work: milestone 1 only. Do not begin milestone 2 without approval.
+
+Milestone 1 implementation update: local code, synthetic example library and targeted checks are available. LiveKit/Supabase/Vercel configuration and a live hosted voice smoke test remain pending; no cloud acceptance is claimed. See [MILESTONE_1_REPORT.md](MILESTONE_1_REPORT.md) and [README.md](README.md). Milestone 2 has not started.
