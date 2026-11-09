@@ -2,7 +2,9 @@
 
 This uses the official [livekit/deploy-action](https://github.com/livekit/deploy-action), pinned to reviewed v2 commit `31f4161e507defdf9e99779af95fcaf8c90115eb`. The workflow is [deploy-livekit.yml](../.github/workflows/deploy-livekit.yml), named **Deploy LiveKit agent (manual)**. It runs only when manually dispatched on `main`; pushes run ordinary tests but do not deploy this agent.
 
-It always uses `OPERATION: deploy`, working directory `agent/`, the checked-in Dockerfile, and existing agent **CA_5zppKdPR3z8g** in project **call-aid-dev-j5qdhieo** (`us-east`). It has no create operation, paid-environment operation, telephony or external notification step. The pending agent is reused. Concurrent manual deployments queue rather than interrupting another deployment.
+It always uses `OPERATION: deploy`, working directory `agent/`, the checked-in Dockerfile, and existing agent **CA_5zppKdPR3z8g** in project **call-aid-dev-j5qdhieo** (`us-east`). It has no create operation, paid-environment operation, telephony or external notification step. The same agent is reused. Concurrent manual deployments queue rather than interrupting another deployment.
+
+**Verified November 9:** the owner configured all five secrets; [run 42703788441](https://github.com/fikunmi-2/call-aid/actions/runs/42703788441) succeeded and hosted version `GaYhTPCKfqth` served a new completed synthetic intake through Supabase and the protected Preview Records Console, without a local worker. Logging fixes followed; current version `GqvhsuGZ4Dvy` is Running ([run 42723826184](https://github.com/fikunmi-2/call-aid/actions/runs/42723826184), commit `21f27ff`). A later call failed before the opening and a realtime probe returned HTTP 429; deployment health does not establish inference availability. See [Milestone 4](../MILESTONE_4_REPORT.md) for test evidence and remaining release gates.
 
 ## Configure repository secrets yourself
 

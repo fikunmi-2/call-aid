@@ -1,6 +1,6 @@
 # Call AId project plan
 
-Status: milestones 1–3 implemented and milestone 4 authorized on 2026-11-09. The protected HTTPS frontend Preview and Supabase reads are verified. The owner chose manual GitHub-hosted deployment of the existing pending agent after local ISP DNS filtering blocked upload; repository secrets/manual dispatch and full hosted voice acceptance remain pending. Build with $0.00 credit usage is owner-confirmed; bounded, period-expiring test offsets are configured. The first Vercel deployment auto-targeted production; the owner paused it and that state is verified. See [Milestone 4](MILESTONE_4_REPORT.md). Obtain owner approval before destructive actions, paid upgrades or final production publication. Do not label local integration as hosted acceptance.
+Status: milestones 1–3 implemented; milestone 4 hosted voice → SBAR → Supabase → Records Console acceptance passed on 2026-11-09 with the existing deployed agent and no local worker. A new completed, reviewed record appeared in the protected HTTPS Preview; independent database validation passed. A later retest failed before the introduction, and a realtime connection probe returned HTTP 429; current availability must be resolved before release. GitHub's official manual deployment action avoided the laptop's ISP upload restriction without weakening TLS or creating another agent. Final production publication requires approval; Vercel is paused again. Exact farewell wording and physical microphone quality remain manual checks. See [Milestone 4 evidence and limitations](MILESTONE_4_REPORT.md).
 
 ## Repository and revised scope
 
@@ -233,6 +233,6 @@ Check current official docs again when implementing:
 
 Changes from the original plan: remove authentication, ownership and scenario machinery; replace six data tables with two and transient evidence; replace general narratives with sanitized SBAR JSON; move a small Supabase admission slice and first hosted voice smoke test into milestone 1. These adjustments preserve immediate public access, trusted writes, validation, safe errors and budget protection without extra services.
 
-Current authorized work: milestone 3 only. Stop before milestone 4.
+Current authorized work: milestone 4 deployment and verification, preserving the existing architecture. Obtain approval before destructive actions, paid upgrades or final production publication.
 
-Implementation update: structured intake and public persistence are implemented. A new synthetic browser conversation produced a confirmed completed Supabase record, and its generated link opened the public SBAR report and console entry. Earlier ended calls were saved as incomplete. Migrations 001–003 are applied; 003 was explicitly approved after a hosted dry run. Vercel/hosted-worker deployment and broader verification remain pending. See milestone reports and README.
+Implementation update: migrations 001–004 are applied. Hosted acceptance created case `696a540c-beed-4696-a989-de6f2c08b039`, confirmed completed/reviewed/published with saved recommendation text. Console count increased 14 → 15; desktop/mobile routes passed. Earlier ended calls remain incomplete. A focused follow-up removes conversation content from SDK runtime errors; no intake or persistence redesign. Final anonymous production release remains pending approval. See milestone reports and README.

@@ -1,107 +1,88 @@
-# Milestone 4: release preparation and deployment status
+# Milestone 4: hosted verification and release status
 
-Date: November 9, 2026. **Milestone 4 is not complete.** The protected HTTPS Preview works with hosted Supabase; the first LiveKit image is pending. The owner authorized deployment and confirmed Build with $0.00 Inference credit usage. Manual GitHub Actions deployment is prepared to avoid the laptop's ISP upload restriction. Final hosted voice acceptance and approved public production release remain outstanding.
+Date: November 9, 2026. **The hosted voice ? SBAR ? Supabase ? Records Console test passed. Final public production release awaits owner approval.** Testing used an owner-protected Vercel Preview, synthetic microphone audio and the deployed LiveKit agent, with no local Python worker running. This does not establish anonymous judge access or physical microphone quality.
 
 ## Deployment state
 
-| Component | Actual observed state |
+| Component | Observed state |
 | --- | --- |
-| LiveKit project | Existing configured project is reachable using server credentials. Web and agent connection fields/dispatch names match. |
-| Hosted agent | One existing pending agent, `CA_5zppKdPR3z8g`, bound in `agent/livekit.toml`, `us-east`. Secret names verified; status Setting Up, version `---`, zero reported CPU/memory usage. Image upload failed locally before a build. No duplicate agent created. |
-| Python production command | Local `src/agent.py start` initialized and registered under `call-aid`. This verifies the start command, not a hosted container. Docker is unavailable locally. |
-| Vercel | Authenticated Call-AId Hobby team; one `call-aid` web project created because none existed. Root `web/`, Next.js 15.5.28, Node 24, locked pnpm build. Explicit Preview is Ready; voice disabled in Preview and Production. |
-| Preview URL | https://call-o13fakmd3-call-ai-d.vercel.app — owner-protected, not anonymous judge access. |
-| Production state | First deployment automatically targeted/aliased production even without `--prod`. It completed before cancellation. Owner subsequently confirmed the required interactive pause; Vercel's paused-project listing now reports `paused: true`. No final release approval is claimed. |
-| Supabase | Existing hosted project reachable, migrations 001–004 applied. Read-only dry run returned up to date; no migration/reset/data deletion was performed. |
-| Hosted voice-to-SBAR acceptance | **Unverified.** No new call has been tested on a deployed HTTPS website with local workers stopped. Previous milestone local-browser/real-cloud tests are separate evidence. |
+| LiveKit | Existing Build project `call-aid-dev-j5qdhieo`, agent `CA_5zppKdPR3z8g`, region `us-east`, dispatch `call-aid`. No duplicate agent or paid environment. |
+| Hosted acceptance version | `GaYhTPCKfqth`, Running; [deployment run 42703788441](https://github.com/fikunmi-2/call-aid/actions/runs/42703788441) passed. |
+| Current hosted version | `GqvhsuGZ4Dvy`, Running, commit `21f27ff`; [manual deployment 42723826184](https://github.com/fikunmi-2/call-aid/actions/runs/42723826184) **passed**. Content-free logs retain numeric HTTP status; 68 Python tests pass. No conversational or persistence change. Prior logging update `eJReKCr4TJSJ` also deployed successfully. |
+| Vercel | Existing Call-AId Hobby project `call-aid`; root `web/`, Next.js 15.5.28, Node 24, locked pnpm build. |
+| Tested voice Preview | https://call-nydvy3gmm-call-ai-d.vercel.app ? Ready, Vercel-auth protected; voice enabled only for this deployment. Owner automation bypass used. |
+| Production | https://call-aid.vercel.app ? final release not approved; Vercel protection and `DEMO_ENABLED=false` retained. Project resumed with approval for Preview testing, then paused again; API verified `paused: true`. |
+| Supabase | Existing hosted project reachable; migrations 001?004 applied, dry run up to date. No new migration, reset or deletion. |
+| Git integration | Existing repository receives normal pushes. Vercel Git link absent because repository-app authorization failed; CLI deployment works. Pushes currently do not auto-deploy this Vercel project. |
 
-The owner authorized continuing the deployment after Vercel login and free-plan confirmation. The LiveKit create allocated only the existing Build project's first slot; its failed upload left a recoverable pending agent. `lk agent config --id` saved the binding for reuse. No paid staging slot or plan upgrade was enabled.
+The laptop's ISP redirected the Oracle upload hostname and caused TLS verification to fail. The official pinned `livekit/deploy-action` uploaded from GitHub's runner and updated the existing agent successfully. No TLS/DNS/trust bypass, new resource or paid service was used. The owner configured the five required repository secrets directly. See [deployment guide](docs/LIVEKIT_GITHUB_DEPLOY.md).
 
-## First Vercel deployment incident
+The first Vercel CLI deployment auto-targeted production without `--prod` and completed before cancellation. It remained protected with voice disabled; the owner paused it. Later deployments explicitly targeted Preview. Temporary resumption was separately approved. Production promotion/removal of protection remains unauthorized.
 
-The CLI's first `deploy --yes --verify` invocation automatically targeted production although `--prod` was omitted. It was inspected while Building, but the cancel request arrived after completion and returned 400. It remained Vercel-auth protected with `DEMO_ENABLED=false`. Pausing via CLI required interactive owner confirmation and was not bypassed. The owner ran that command and the paused state was verified. A separate `--environment preview` deployment succeeded. All future deployments must name their target explicitly; do not resume/promote production without final approval.
+## Hosted acceptance evidence
 
-## Release changes
+1. Opened the protected HTTPS Preview in Chromium and started an actual admitted voice session without application login.
+2. Supplied invented headache symptoms through a synthetic browser microphone; answered follow-ups and clarified missing fields.
+3. Reviewed and confirmed the recap. The hosted Python worker generated and saved the record; no local `src/agent.py` worker was running.
+4. **View Generated Record** opened the new report; the console contained the same case. Actual database count increased **14 ? 15**, with zero browser page errors.
+5. Independently read the saved record through the trusted hosted Supabase RPC and validated it with Pydantic: completed, reviewed, published, schema 3.0, `recommendation.record_saved=true`, no missing required fields.
 
-- Preserved Milestone 1–3 workflow, screening, constrained SBAR, trusted saves and natural closing behavior. Committed the previously tested closing/publication changes separately as `412e904` (`feat: confirm saved reports and preserve safe intake categories`).
-- Patched Next.js and eslint-config-next from 15.5.27 to 15.5.28; pinned Next's PostCSS dependency to 8.5.23. The original production audit found critical/high Next.js advisories and PostCSS advisories. The patched production audit reports **zero known vulnerabilities**. No framework major upgrade or redesign was introduced.
-- Committed security/deployment-origin changes as `78b1446` (`fix: patch web dependencies and validate preview origins`). Vercel Git connection was attempted but failed due to GitHub repository access; project inspection confirms no Git link, so pushing code does not trigger this project's production deployment. Connecting the Vercel GitHub app still needs owner repository authorization.
-- Added a small preview-origin guard: only exact Vercel-provided deployment/branch origins are accepted in Preview. Production still requires the configured canonical origin; caller-controlled forwarding headers are ignored. Regression coverage verifies both boundaries.
-- Added `.vercelignore` to exclude secrets, local tools, Python source and caches from web uploads. Tightened agent `.dockerignore` to omit test/debug harnesses and build output. Local env files remain ignored.
-- Added a cloud-free GitHub Actions workflow for the existing Python, web, PostgreSQL and browser checks. Repository permission is read-only. [Hosted CI run 42703434876](https://github.com/fikunmi-2/call-aid/actions/runs/42703434876) passed on pushed commit `9964cd5`.
-- Added browser capacity/usage-error checks and clarified that the visible report result confirms persistence. No model instructions or clinical behavior changed in Milestone 4.
-- Updated README with features, synthetic screenshots, environment reference, current deployment commands, rollback, maintenance, constraints and an explicitly pending public URL.
-- Configured Preview/Production server credentials via Vercel's supported stdin env workflow, with sensitive keys hidden. Voice is off. Added period-expiring verified historical test offsets so the new bounded release allowance does not require deleting accounting or expanding future periods.
-- Added `.github/workflows/deploy-livekit.yml` using the official `livekit/deploy-action`, pinned v2 commit `31f4161e507defdf9e99779af95fcaf8c90115eb`. It is manual `workflow_dispatch` only, deploys `agent/` to the existing ID, uses read-only repository permissions, queues concurrent runs and waits for Running status. There is no create/delete/paid environment operation. See [GitHub deployment guide](docs/LIVEKIT_GITHUB_DEPLOY.md).
+New synthetic case: **`696a540c-beed-4696-a989-de6f2c08b039`** ([protected Preview report](https://call-nydvy3gmm-call-ai-d.vercel.app/records/696a540c-beed-4696-a989-de6f2c08b039)). It expires after seven days. This is a newly created record, not a fixture. Published categories include headache, yesterday, intermittent duration, moderate severity, gradual onset, nausea and changed sleep. The saved recommendation accurately describes generation and saving, with no temporary/unsaved wording.
+
+The test captured **15.27 seconds** of synthetic assistant farewell locally. Optional LiveKit STT transcription failed with **429** after SDK retries. **Exact spoken closing wording was not verified in this hosted test.** Database save authority and displayed outcome passed; earlier real-model closing probes are separate evidence. No upgrade or alternate paid service bypassed the 429.
+
+**Later retest failed:** after the logging-only deployment, an actual protected Preview call connected but disconnected before the opening. It did not produce a completed report; a subsequent content-free realtime connection probe identified `APIConnectionError` caused by `WSServerHandshakeError` with HTTP **429**. This is the inference gateway, not the application's session-start admission cap; admission and room connection had succeeded. Do not interpret the earlier success as proof of current inference availability. Credit exhaustion, quota and temporary throttling have not been distinguished; the owner was asked to inspect dashboard balance/warnings. Vercel was paused again. The initial completed case remains independently verified. Actual console totals after the interrupted attempt are 16 (4 completed / 12 incomplete), separate from sample cases.
+
+The model needed retries/clarification and did not preserve every detail from a richer utterance. Eight grounding rejections and one malformed tool argument occurred before successful completion. Evidence validation remains intact. This is a probabilistic extraction limitation, not exhaustive clinical information capture.
 
 ## Executed checks
 
 | Check | Result |
 | --- | --- |
-| Python intake/rules/validation/persistence/closing tests | 64 passed |
-| Python Ruff check and format | Passed |
-| Exact agent environment dependency consistency | 81 installed packages compatible, Python 3.12.16 |
-| Web/API/PostgreSQL tests | 59 passed, including preview-origin guard and UTC offset expiry |
-| ESLint and TypeScript | Passed; production build also checks types |
-| Next.js production build | Passed on patched 15.5.28; records routes remain dynamic |
-| Production dependency audit | Zero known vulnerabilities after patch |
-| Final patched browser suite | 16 passed across desktop/mobile, including capacity and usage errors |
-| Hosted migration dry run | Up to date; no changes applied |
-| Hosted database permissions | RLS enabled on both private tables; anon SELECT/INSERT/UPDATE/DELETE all false |
-| Credential scan | No exact configured credential values in tracked/staged files or built browser JS; no forbidden tracked env/tool paths |
-| Production-mode worker smoke | Local named worker registration succeeded; no inference call made by this startup check |
-| GitHub workflow validation | Official actionlint 1.7.12 passed for both workflows; deployment workflow not executed until repository secrets/manual dispatch |
-| Workflow preflight checks | Valid synthetic config passed; missing secret, mismatched project and malformed secret failed without leaking values |
-| GitHub-hosted CI | Passed: Python, web/database, build and browser checks on run 42703434876 |
-| Hosted Preview browser checks | Passed on desktop/mobile through the owner's supported automation bypass: HTTPS routes, real published detail, 14 actual saved cases, clear unknown/incomplete state, origin rejection, disabled-voice 503 and no page errors/overflow |
-| Anonymous Preview access | Redirects to Vercel authentication (302); not reported as public judge access |
+| Python intake/rules/SBAR/publication/persistence/closing | 64 passed originally; **68 passed** with four log privacy regressions |
+| Ruff lint/format | Passed after correction |
+| Dependency consistency | 81 packages compatible; Python 3.12.16, Agents SDK 1.8.10 |
+| Web/API/PostgreSQL tests | 59 passed, including preview origin and UTC offset expiry |
+| ESLint, TypeScript, production build | Passed on Next.js 15.5.28; record routes dynamic |
+| Production audit | Zero known vulnerabilities after Next.js/PostCSS patches |
+| Local desktop/mobile Playwright | 16 passed, including unavailable/capacity/usage errors |
+| Cloud-free CI | [42703434876](https://github.com/fikunmi-2/call-aid/actions/runs/42703434876), [42703820419](https://github.com/fikunmi-2/call-aid/actions/runs/42703820419), [42722378177](https://github.com/fikunmi-2/call-aid/actions/runs/42722378177) and current [42723734707](https://github.com/fikunmi-2/call-aid/actions/runs/42723734707) passed |
+| Workflow checks | actionlint 1.7.12 passed; synthetic preflight rejects missing/malformed/mismatched secrets without printing values |
+| Hosted DB access | RLS enabled; anon SELECT/INSERT/UPDATE/DELETE denied on both private tables |
+| Hosted desktop/mobile pages | All four routes passed, no overflow/page errors; new saved report and actual total 15 verified |
+| Anonymous Preview access | 302 to Vercel authentication; not public judge access |
+| New hosted voice-to-saved-report | **Passed**, local workers stopped; independent DB verification passed |
+| Retest after log correction | **Failed before introduction**; separate realtime probe returned HTTP 429. Current availability unresolved. |
+| Exact hosted farewell wording | **Unverified**, optional STT 429 |
+| Secret scan | No configured credentials in tracked/staged files or browser JS; no tracked env/local tools |
 
-The SQL tests execute actual migrations in disposable PGlite and cover idempotency, transaction failure, incomplete states, capacity, budgets and denied privileged access. Database failure and save-confirmation authority are covered by tests; a real hosted database outage was not induced. Browser unavailable/capacity/usage responses are mocked and microphone denial is browser-injected. These are not hosted outage tests or physical-device microphone checks.
+SQL tests use actual migrations in disposable PGlite for retries, rollback, incomplete states, capacity/budgets and denied access. No real hosted DB outage was induced. Failure browser checks use mocked responses or injected microphone denial. Physical mobile/desktop microphones, noise, accents and subjective audio quality remain manual checks. Screenshots use synthetic data.
 
-The patched production server returned HTTP 200 for `/`, `/demo`, `/records` and a sample `/records/[id]` at desktop and mobile widths. All eight route/viewport checks had no horizontal overflow or page errors. Checks verified privacy headers, no operational session fields in public HTML, real database statistics, receipt-free status returning unavailable, and rejection of an untrusted request origin. Desktop landing and mobile SBAR screenshots were visually reviewed. All documentation screenshots contain synthetic data only.
+## Privacy correction discovered during hosted testing
 
-## Configured free-tier release controls
+Despite `session.start(record=False)`, an SDK tool-validation error emitted `lk.pii.arguments` containing synthetic evidence to worker stdout. Recording controls alone do not sanitize runtime console logs. Commit `7415acd` installs a content-free filter on existing job-process root handlers before admission/model setup. It retains severity, logger/source and fixed application event codes while removing arbitrary extras, exception details and uncontrolled message bodies. Intake, tools and database behavior are unchanged.
 
-Read-only admission accounting on November 9 showed:
+Four regression tests cover the installed SDK JSON formatter, child-logger propagation and numeric status preservation with synthetic identifying text. Bounded hosted logs on the first corrected version contained eight content-omitted events and zero `lk.pii.arguments` fields. Earlier provider logs contain synthetic content only; the correction is not retroactive. Project-level observability settings still require owner review. See [LiveKit PII redaction boundaries](https://docs.livekit.io/testing/observability/pii-redaction/); do not claim automatic detection guarantees de-identification.
 
-- 31 monthly reservations; **4,500,100 estimated reserved microdollars**.
-- 21 starts that UTC day; 3,780 reserved voice seconds.
+## Cost and environment
 
-The owner confirmed Build with $0.00 Inference credits used. The release retains a $2 **new estimated reservation** allowance, 150,000 estimated microdollars per call, one concurrent session, 180-second calls, two starts per ten minutes, five per visitor/day, ten globally/day and 900 reserved seconds/day. Existing verified test totals are added only for their original UTC month/day using the server-only `PRIOR_TEST_*` variables. Regression tests verify daily and monthly rollover automatically removes these offsets. No history was deleted and no production unlimited bypass was added.
+The owner confirmed Build and **$0.00 Inference credits used before hosted checks**. Current billed balance is not exposed by the CLI and remains unverified. The STT 429 does not establish a billing cause.
 
-These totals are application estimates, **not actual billed usage or a guaranteed token-cost bound**. The configured $2 estimate leaves headroom below the currently documented $2.50 Build credits, with the Build hard cap as billing backstop. Dashboard balance is owner-reported; it is not exposed by this CLI. Vercel is Hobby with its default basic build machine. Both environments remain `DEMO_ENABLED=false` until the hosted agent and new-call workflow are verified. No paid upgrade/top-up or unlimited public access is assumed.
+Limits remain one concurrent call, 180 seconds, 45 seconds idle, 20 user turns, two starts/ten minutes, five per visitor/day, ten globally/day, 900 reserved seconds/day and $2 estimated monthly release reservations, reserving 150,000 microdollars per start. These are estimates, not guaranteed token-cost bounds. LiveKit Build caps are the billing backstop; check actual dashboard usage before sharing.
 
-## Upload-network failure and GitHub recovery
+Historical test totals remain: 4,500,100 estimated reserved microdollars and 21 starts / 3,780 seconds on November 9 before release testing. Optional server-only `PRIOR_TEST_MONTH`, `PRIOR_TEST_COST_MICRODOLLARS`, `PRIOR_TEST_DAY`, `PRIOR_TEST_STARTS`, `PRIOR_TEST_VOICE_SECONDS` offsets allow a fresh bounded allowance only in their original UTC month/day, then expire automatically. Hosted acceptance consumed another reservation. No accounting reset or production unlimited flag.
 
-The laptop resolves LiveKit's Oracle upload host to an ISP address serving an expired, unrelated `*.myaccess.coop` certificate. Verified TLS failed in CLI/curl. A diagnostic DNS-over-HTTPS query returned Oracle addresses instead. No DNS, trust-store or TLS verification setting was altered, and no credentialed request was sent after the certificate failure. This is not an application-code build failure.
-
-The owner explicitly requested the official GitHub-hosted deployment action. Repository secrets must be configured directly in GitHub: `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`. The workflow constructs `SECRET_LIST` for supported runtime secret injection, preserves the tested dispatch/model settings, and uploads from GitHub's Ubuntu runner to LiveKit's build service. The local network upload restriction is therefore not on that path. Actual runner success, startup logs and call health remain unverified until the owner adds secrets and runs it.
-
-Commit `9964cd5` (`ci: deploy existing LiveKit agent manually from hosted runner`) was pushed to the existing repository's `main` branch by a normal fast-forward push. The manual workflow is active at [Deploy LiveKit agent (manual)](https://github.com/fikunmi-2/call-aid/actions/workflows/deploy-livekit.yml). The agent deployment was not triggered by the push; only the ordinary prototype checks ran. The owner was given direct GitHub secret-setting and dispatch instructions. No secret values were requested in chat.
-
-Non-sensitive deployment recovery feedback was submitted through the official [LiveKit agent skills](https://github.com/livekit/agent-skills), as required by the local reading-livekit-docs skill/project instructions. The installed skills remain ignored local tooling.
+No new migration or required application env variable in this resumed work. Privileged secrets remain server-side in ignored env files and supported cloud secret stores. No browser Supabase client, anonymous writes or paid service enabled.
 
 ## Remaining release gates
 
-1. Add the five repository secrets directly in [GitHub Actions settings](https://github.com/fikunmi-2/call-aid/settings/secrets/actions), then manually run **Deploy LiveKit agent (manual)** on `main`. The workflow must deploy to the existing pending ID, not create a replacement.
-2. Inspect the actual Actions run, hosted agent version/status/secret names and bounded startup logs. A reported Running status alone does not prove audio or persistence. Verify that no paid service was enabled.
-3. Keep production paused. After a healthy worker, enable only Preview voice for a bounded synthetic check, stop every local worker and complete the HTTPS new voice → reviewed recap → saved report → accurate warm closing → generated link → same dashboard case. Cloud recording/transcript export settings still need verification.
-4. Owner-authorize the Vercel GitHub app for this repository if automatic Git integration is desired; CLI source deployment currently works without that link. Confirm any Git connection will not prematurely publish production.
-5. Test hosted failure states and project recording/observability settings; do not claim local mocks prove hosted behavior. Physical mobile microphone, noise/accents and human audio quality remain manual checks.
-6. Present the actual tested preview/version/limits for final owner approval before production promotion or a production-triggering Git push. Update public URLs and this report only after that deployment succeeds. No force-push or history rewrite.
-7. Configure daily trusted cleanup using existing Supabase maintenance. Records expire after seven days and are filtered immediately; scheduling is not yet verified.
+- Resolve the realtime HTTP 429 and rerun acceptance on current version `GqvhsuGZ4Dvy` before claiming current voice availability; the earlier deployed version passed actual hosted acceptance. Current CI passed and CLI reports the same existing agent Running.
+- Owner check of exact farewell and physical microphone/mobile audio; automated transcription success is not claimed.
+- **Owner approval before final production publication, resumption and judge access.** The tested Preview, source and limits are ready for review.
+- Optional Vercel GitHub app repository authorization for automatic Git deployment.
+- Configure/verify daily trusted `public.cleanup_demo_records()` maintenance. Expired records are immediately excluded; scheduled deletion is not yet verified.
+- Owner dashboard review of project-wide recording, observability and retention settings. Agent recording is explicitly disabled; no Canadian residency/anonymity guarantee.
 
-## Known limitations
+Disable new calls with `DEMO_ENABLED=false` plus redeployment. Existing calls remain bounded. Roll back versions rather than resetting the database. Free-tier cold starts/quotas can interrupt voice; labelled examples remain available when the site is serving. Reports are public demonstrations, not clinical records.
 
-Speech extraction and closing wording remain probabilistic. Earlier synthetic tests sometimes required clarification or lost categories; review/correction remains essential. Strict public categories omit nuance, and flags are simulated rather than validated triage. A disconnect/deadline can cut off goodbye, but only a confirmed saved record authorizes a report link. Cloud processing does not establish Canadian residency, anonymity or fictional input. Free-tier cold starts/credit exhaustion can interrupt availability. No raw transcripts, real names or health identifiers are a fallback.
-
-The working local service path is documented in Milestone 3/publication reports; it is not evidence that a public release or local-worker independence has passed.
-
-Local web/agent development processes are restored after production-mode validation and must be stopped for hosted call acceptance. No healthy hosted agent is claimed yet. Five optional period-bound accounting variables were added; no database migration was needed. Never paste any secret values into chat or commits.
-
-## Security advisory sources
-
-- [Next.js RCE advisory and patched 15.5.28](https://github.com/vercel/next.js/security/advisories/GHSA-2464-fhr4-w9xw).
-- [Next.js App Router denial-of-service advisory](https://github.com/vercel/next.js/security/advisories/GHSA-p3m5-59mp-jv5r).
-- [PostCSS source-map disclosure fix](https://github.com/postcss/postcss/security/advisories/GHSA-fxqj-rqcc-2cmp).
-- [LiveKit deployment](https://docs.livekit.io/deploy/agents/quickstart/), [secret injection](https://docs.livekit.io/deploy/agents/secrets/), [quota behavior](https://docs.livekit.io/deploy/admin/quotas-and-limits/).
+Earlier non-sensitive recovery feedback was submitted under the official [LiveKit agent skills](https://github.com/livekit/agent-skills) and local project instructions. A new logging-documentation note was blocked by automatic approval review because external submission lacked explicit user consent; it was not sent. Optional permission is pending and does not block release engineering. No credentials/transcripts were submitted. See [README](README.md) for setup and deployment.
