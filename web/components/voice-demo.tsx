@@ -7,6 +7,8 @@ import {
   Track,
   createLocalAudioTrack,
   type LocalAudioTrack,
+  ParticipantKind,
+  type RemoteParticipant,
 } from "livekit-client";
 import {
   RoomContext,
@@ -18,6 +20,8 @@ import {
   useMediaDeviceSelect,
 } from "@livekit/components-react";
 import { Mic, MicOff, PhoneOff, AudioLines, ArrowRight } from "lucide-react";
+import { IntakePreview } from "./intake-preview";
+import { parseIntakeReport, type IntakeReport } from "@/lib/intake-report";
 type Connection = {
   serverUrl: string;
   participantToken: string;
@@ -35,32 +39,80 @@ export function VoiceDemo() {
     "Your microphone stays off until you start.",
   );
   const [deadline, setDeadline] = useState<number | null>(null);
+  const [report, setReport] = useState<IntakeReport | null>(null);
+  const latestReport = useRef<IntakeReport | null>(null);
+  const [reportError, setReportError] = useState("");
+  const endReceipt = useRef<(() => void) | null>(null);
   const busy = useRef(false),
     active = useRef(false);
   const end = async () => {
+    // Ask for a safe partial preview before closing audio. A network failure
+    // cannot be recovered through persistence until milestone 3.
+    const receipt = new Promise<void>((resolve) => {
+      endReceipt.current = resolve;
+    });
+    try {
+      await room.localParticipant.publishData(new TextEncoder().encode("end"), {
+        reliable: true,
+        topic: "callaid.control.v1",
+      });
+      await Promise.race([
+        receipt,
+        new Promise((resolve) => setTimeout(resolve, 1800)),
+      ]);
+    } catch {
+      /* Disconnect still works when the room is unavailable. */
+    }
+    endReceipt.current = null;
     active.current = false;
     setDeadline(null);
     await room.disconnect();
     setPhase("ended");
     setMessage(
-      "Session ended. New report generation is coming in the next milestones.",
+      "Session ended. Any temporary summary appears below and has not been saved.",
     );
     void fetch("/api/sessions/end", { method: "POST" });
   };
   useEffect(() => {
+    const received = (
+      data: Uint8Array,
+      participant?: RemoteParticipant,
+      _kind?: unknown,
+      topic?: string,
+    ) => {
+      if (
+        topic !== "callaid.sbar.v1" ||
+        participant?.kind !== ParticipantKind.AGENT
+      )
+        return;
+      const result = parseIntakeReport(data);
+      if (result) {
+        setReport(result);
+        latestReport.current = result;
+        setReportError("");
+        endReceipt.current?.();
+      } else
+        setReportError(
+          "The temporary report could not be validated and is not displayed.",
+        );
+    };
+    room.on(RoomEvent.DataReceived, received);
     const disconnected = () => {
       if (active.current) {
         active.current = false;
         setDeadline(null);
         setPhase("ended");
         setMessage(
-          "The session disconnected. You can restart or explore an example report.",
+          latestReport.current
+            ? "Session ended. Your last temporary summary is below. It has not been saved."
+            : "The session disconnected. You can restart or explore an example report.",
         );
         void fetch("/api/sessions/end", { method: "POST" });
       }
     };
     room.on(RoomEvent.Disconnected, disconnected);
     return () => {
+      room.off(RoomEvent.DataReceived, received);
       room.off(RoomEvent.Disconnected, disconnected);
       void room.disconnect();
     };
@@ -82,6 +134,9 @@ export function VoiceDemo() {
   async function start() {
     if (busy.current) return;
     busy.current = true;
+    setReport(null);
+    latestReport.current = null;
+    setReportError("");
     setPhase("connecting");
     setMessage("Checking your microphone…");
     let microphone: LocalAudioTrack | undefined;
@@ -169,10 +224,12 @@ export function VoiceDemo() {
         <StartAudio label="Enable assistant audio" />
         <RoomAudioRenderer />
         <div className="voice-panel-note">
-          Milestone 1: voice conversation only. New SBAR generation and saving
-          are not enabled yet.
+          A generalized SBAR preview is prepared during the conversation. It is
+          temporary, not saved, and not added to the public records dashboard.
         </div>
       </section>
+      {reportError && <p role="alert">{reportError}</p>}
+      {report && <IntakePreview report={report} />}
       <Link href="/records" className="text-link examples-link">
         Voice unavailable? Explore synthetic examples <ArrowRight size={16} />
       </Link>

@@ -1,0 +1,89 @@
+{
+  "schema_version": "2.0",
+  "workflow_version": "intake-2.0",
+  "rules_version": "demo-rules-1.0",
+  "case_id": "a0000000-0000-4000-8000-000000000002",
+  "demonstration_label": "Demo Case A00000",
+  "started_on": "2026-11-08",
+  "generated_on": "2026-11-08",
+  "status": "incomplete",
+  "reviewed": false,
+  "not_for_medical_use": true,
+  "publication": "not_published",
+  "situation": {
+    "text": "Presenting concern: unknown.",
+    "facts": [
+      {
+        "field": "chief_complaint",
+        "state": "unknown",
+        "values": []
+      }
+    ]
+  },
+  "background": {
+    "text": "Onset: unknown. Duration: unknown. Associated symptoms: unknown. Reported background: unknown.",
+    "facts": [
+      {
+        "field": "onset",
+        "state": "unknown",
+        "values": []
+      },
+      {
+        "field": "duration",
+        "state": "unknown",
+        "values": []
+      },
+      {
+        "field": "associated_symptoms",
+        "state": "unknown",
+        "values": []
+      },
+      {
+        "field": "background",
+        "state": "unknown",
+        "values": []
+      }
+    ]
+  },
+  "assessment": {
+    "text": "Progression: unknown. Severity: unknown.",
+    "facts": [
+      {
+        "field": "progression",
+        "state": "unknown",
+        "values": []
+      },
+      {
+        "field": "severity",
+        "state": "unknown",
+        "values": []
+      }
+    ],
+    "disclaimer": "User-reported information and simulated flags only; not a diagnosis or validated triage.",
+    "missing_information": [
+      "chief_complaint",
+      "onset",
+      "duration",
+      "progression",
+      "severity",
+      "associated_symptoms",
+      "background"
+    ],
+    "simulated_flags": [
+      {
+        "code": "DEMO_INCOMPLETE",
+        "label": "Simulated marker: intake has missing information or is unreviewed",
+        "evidence_fields": []
+      }
+    ]
+  },
+  "recommendation": {
+    "text": "The prototype prepared a temporary recap. It has not been confirmed by the caller. Important information is incomplete. No record was saved and no clinical recommendation was made.",
+    "actions": [
+      "recap_prepared",
+      "session_incomplete"
+    ],
+    "approved_information_ids": [],
+    "record_saved": false
+  }
+}

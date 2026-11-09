@@ -99,7 +99,7 @@ export default function Home() {
               n: "02",
               icon: AudioLines,
               title: "Keep the conversation going",
-              text: "Explore a voice interaction with an AI assistant. Structured intake follows in the next milestone.",
+              text: "Describe a made-up concern, answer relevant questions, and review a temporary SBAR summary.",
             },
             {
               n: "03",

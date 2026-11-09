@@ -1,4 +1,14 @@
 @import "tailwindcss";
+
+.intake-preview { width: 100%; margin: 2rem 0; padding: clamp(1rem, 4vw, 2rem); border: 1px solid var(--border, #d5ded8); border-radius: 18px; background: #fff; text-align: left; }
+.intake-preview h2 { font-size: 1.8rem; margin: .5rem 0; }
+.intake-preview h3 { font-size: 1.1rem; margin: 1.5rem 0 .7rem; }
+.intake-preview dl > div { display: grid; grid-template-columns: minmax(130px, 1fr) 2fr; gap: 1rem; padding: .5rem 0; border-bottom: 1px solid #edf0ed; }
+.intake-preview dt { font-weight: 600; }
+.intake-preview dd { margin: 0; }
+.intake-preview details { margin-top: 1.5rem; }
+.intake-preview pre { max-height: 28rem; overflow: auto; padding: 1rem; font-size: .8rem; background: #f4f7f4; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media(max-width: 480px) { .intake-preview dl > div { grid-template-columns: 1fr; gap: .2rem; } }
 .microphone-check {
   max-width: 400px;
   margin: 24px auto 0;

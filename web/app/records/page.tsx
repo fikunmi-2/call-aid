@@ -17,7 +17,7 @@ export default function Records() {
             examples below.
           </p>
         </div>
-        <span className="pill">Milestone 1 · Example library</span>
+        <span className="pill">Synthetic example library</span>
       </div>
       <div className="info-box">
         <strong>Preloaded synthetic examples</strong>

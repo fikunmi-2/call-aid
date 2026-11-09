@@ -2,13 +2,17 @@
 
 **Not for medical use.** Public browser voice research prototype for rural Saskatchewan. Use fictional information only. No diagnosis, prescription, validated triage, clinical referral, telephone integration or real patient processing.
 
-Milestone 1 implementation: public landing and voice UI, official LiveKit starter foundations, named Python realtime voice worker, private session admission in Supabase, and two clearly labeled preloaded synthetic SBAR examples. No authentication, scenario gate or acknowledgement form.
+Milestone 2 adds Python-controlled adaptive intake, Pydantic validation, deterministic simulated screening and a temporary SBAR preview to the public voice application. No authentication, scenario gate or acknowledgement form.
 
-**New voice conversations do not generate or save SBAR reports yet.** Structured intake/rules/generation belong to milestone 2; saved public reports belong to milestone 3. The examples are static fixtures, not evidence of successful live persistence. The required milestone 3 test is a newly completed browser voice conversation producing a saved Supabase SBAR report visible in the public console.
+**New voice conversations generate temporary SBAR reports but do not save or publish them.** Review the spoken recap, correct any important details, then confirm it. A validated generalized preview and JSON appear on `/demo`; refreshing or starting another call clears them. The public records pages still contain static synthetic examples. Saved public reports belong to milestone 3, whose essential test remains a newly completed browser voice conversation producing a saved Supabase report visible in the public console.
 
 ## Architecture
 
-Browser → Next.js session endpoint → private Supabase reservation → scoped LiveKit token and named dispatch → Python realtime agent. The browser publishes microphone audio only; agent recording, text input/output and video are disabled. Only content-free session state is persisted in milestone 1. No raw transcript or audio storage is implemented.
+Browser → Next.js session endpoint → private Supabase reservation → scoped LiveKit token and named dispatch → Python realtime agent → validated in-memory SBAR → reliable room data → temporary browser preview. The browser publishes microphone audio only; agent recording, text input/output and video are disabled. Only content-free operational session state is persisted. No audio, raw transcripts, symptom content or SBAR records are written to Supabase.
+
+`agent/src/intake.py` owns conditional questions, corrections, unknowns, turn limits and review/completion. `intake_schema.py` defines strict Pydantic models; `rules.py` contains versioned simulated markers; `sbar.py` assembles approved templates. `intake_agent.py` connects these to LiveKit tools and committed conversation events. The model interprets meaning and phrases questions; it cannot write database records, choose clinical urgency or supply arbitrary SBAR narratives. The recap must finish playing before a subsequent caller confirmation can mark it reviewed. An interrupted or corrected recap requires another review.
+
+Only bounded categories enter the temporary report. Evidence quotes are checked transiently against the current caller utterance and excluded from workflow facts/reports; the SDK/model necessarily keep conversation and tool context in worker memory until the job ends. The code does not persist that context. A matching quote does not prove semantic accuracy: the caller review and synthetic model checks are necessary, and neither can establish that a real speaker is fictional. Publication is disabled entirely in this milestone. The combination/privacy publication policy must be completed before milestone 3 exposes any new report publicly.
 
 Public routes: `/`, `/demo`, `/records`, `/records/[id]`. The records pages currently serve curated synthetic examples directly from source, so judges can inspect recognizable SBAR even when services are offline. They never request LiveKit or Supabase credentials. All secrets stay in server modules/env files. Supabase Auth is unused.
 
@@ -50,7 +54,7 @@ Put `SUPABASE_URL` and the server secret/service-role key in **both** `web/.env.
 
 Create a LiveKit Cloud Build project. Obtain the WebSocket URL, API key and API secret. Set them in both env files. Use the same `LIVEKIT_AGENT_NAME=call-aid` for web and agent. Disable development token servers, recordings and transcript observability exports in the project; the Python code also explicitly uses `session.start(record=False)`.
 
-The current configured model candidate is `google/gemini-3.8-live` with voice `Puck`, using `livekit.agents.inference.RealtimeModel`. Official docs list it as supported; **this project's model/audio behavior still requires a credentialed live test**. OpenAI realtime alternatives have different cost/voice settings; change the model/voice together after consulting the [Inference catalog](https://docs.livekit.io/agents/models/inference/). No direct Google/OpenAI API key is needed.
+The tested realtime configuration is `google/gemini-3.8-live` with voice `Puck`, using `livekit.agents.inference.RealtimeModel`. See [the milestone 2 report](MILESTONE_2_REPORT.md) for actual test results and limitations. Other realtime models have different cost/voice settings; change the model/voice together after consulting the [Inference catalog](https://docs.livekit.io/agents/models/inference/). No direct model-provider API key is needed.
 
 Generate a random HMAC secret for the web server, for example with this local command, then copy its output directly into `SESSION_HMAC_SECRET` in the local env file (never into chat or Git):
 
@@ -107,9 +111,21 @@ uv run ruff format --check src tests
 uv run pytest
 ```
 
-These cover bounded/validated leases, privacy room options and scripted lifecycle wiring: an admitted call starts with recording disabled and deletes the room, while an unreserved job never initializes inference. Mocked lifecycle tests do not establish language understanding or audio quality. `scenarios.yaml` defines fictional natural-symptom and clinical-advice-refusal checks for a later credentialed simulation. Extensive automation is deferred.
+These cover adaptive intake, unknowns/corrections, simulated rules, grounded templates, review delivery, bounded leases and lifecycle wiring. An admitted call disables recording and deletes the room; unreserved jobs never initialize inference. Scripted tests do not establish model understanding or audio quality. `scenarios.yaml` includes synthetic headache correction, abdominal unknowns, prompt injection and clinical-advice checks for optional cloud simulation. See the milestone 2 report for the separate actual audio/browser results. Extensive automation is deferred.
 
-For live verification, use the actual browser path, then inspect content-free LiveKit status/logs. The generic debugger/console does not have a trusted database reservation; do not weaken admission to make it work. A future isolated SDK test harness can exercise the same Assistant with synthetic audio. Do not enable SDK DEBUG logging, transcript exports or recording to troubleshoot public participant input.
+For live verification, use the actual browser path and inspect content-free status/logs. `src/agent.py` requires a trusted reservation; do not weaken admission for the debugger. The separate synthetic-only `debug_intake.py` exercises the same Assistant without database access:
+
+```powershell
+cd agent
+lk agent debugger start --audio --idle-timeout 3m debug_intake.py
+lk agent debugger say "I have a headache that began gradually yesterday."
+lk agent debugger say "Actually, it began today."
+lk agent debugger stop
+```
+
+The CLI needs the existing LiveKit project credentials/configuration as well as the agent's env file. Debugger audio uses additional inference TTS credits; its temporary logs/history must contain synthetic input only. Never enter real patient information or enable transcript exports/DEBUG logging for public visitors. Regular tests run offline; paid cloud simulations remain opt-in, outside CI.
+
+Regenerate the shared JSON Schema, controlled value labels and synthetic fixture after changing Pydantic contracts: from `agent/`, run `uv run python export_contract.py`. The web validates received JSON at runtime with strict Zod models and approved templates. Python is canonical; cross-language fixtures and targeted tests detect drift. No transcript is sent through the preview channel or stored in browser storage.
 
 ## Early deployment configuration
 
@@ -120,7 +136,7 @@ Milestone 1 is ready for a credentialed preview setup; no hosted deployment has 
 3. Add agent secrets from `agent/.env.local` through the CLI/LiveKit console secret settings. Verify the Build plan, model availability and Inference balance. Use a single hosted deployment; no paid deployment slots are needed for this preview.
 4. Apply the Supabase migration, enable new calls, then complete a synthetic HTTPS microphone smoke test: start → assistant heard → visitor heard → mute → end → room removed. Check denied microphone, unavailable worker and rate/deadline failures. Keep examples accessible. Do not describe voice or cloud integration as verified until these pass.
 
-At initial implementation, cloud credentials were unavailable. Subsequent local setup verified the Supabase session RPC, LiveKit worker registration and synthetic browser audio in both directions. Local env files remain ignored. Model safety behavior, hosted browser deployment and full hosted RLS testing remain unverified. See the milestone report for updated results. The current local dev URL is http://localhost:3001; keep `APP_ORIGIN` equal to the URL used by the browser.
+At initial implementation, cloud credentials were unavailable. Subsequent local setup verified the Supabase session RPC, LiveKit worker registration and synthetic browser audio in both directions. Milestone 2 also verified structured intake and a temporary browser report. Local env files remain ignored. Broader model safety behavior, hosted browser deployment and full hosted RLS testing remain unverified. See the milestone reports for results. The current local dev URL is http://localhost:3001; keep `APP_ORIGIN` equal to the URL used by the browser.
 
 ## Starter and skill provenance
 
@@ -128,4 +144,4 @@ At initial implementation, cloud credentials were unavailable. Subsequent local 
 - Python foundation: [livekit-examples/agent-starter-python](https://github.com/livekit-examples/agent-starter-python), commit `228095c442fcb259c80e9786fc0d7c5534e6af46`. Adapted AgentServer entry point, uv project and Dockerfile to native realtime and server reservations. MIT license retained in `agent/LICENSE`.
 - Official [LiveKit Agent Skills](https://github.com/livekit/agent-skills), commit `e1195b497388b1aecad5dd2e9a0c9bdfbaba1878`, were installed manually by copying their skill directories into `agent/.agents/skills`, as supported by the [installation docs](https://docs.livekit.io/reference/developer-tools/agent-skills/). These are local developer tools excluded from Git; install them locally when needed. No global Codex settings were changed. The project-local CLI is 2.19.3 and installed Python SDK is 1.8.10.
 
-Review the approved [project plan](PROJECT_PLAN.md). Stop after milestone 1; milestone 2 requires approval.
+Review the approved [project plan](PROJECT_PLAN.md). Milestone 3 requires separate approval; no SBAR persistence has been implemented.

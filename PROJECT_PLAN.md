@@ -1,6 +1,6 @@
 # Call AId project plan
 
-Status: architecture and four milestones approved, 2026-11-08. Final adjustments incorporated; milestone 1 is authorized. Test each milestone, report results and limitations, then stop for approval before the next milestone.
+Status: architecture approved; milestones 1 and 2 implemented locally, 2026-11-08. See [Milestone 1](MILESTONE_1_REPORT.md) and [Milestone 2](MILESTONE_2_REPORT.md) for results and limitations. Milestone 3 has not started and requires approval. Test each milestone, report results and limitations, then stop for approval before the next milestone.
 
 ## Repository and revised scope
 
@@ -141,7 +141,8 @@ call-aid/
     src/
       agent.py                      # starter SDK entry point
       intake.py                     # guided workflow and extraction tools
-      schemas.py                    # internal/public Pydantic models
+      intake_agent.py               # SDK tools/events around the plain workflow
+      intake_schema.py              # internal/temporary-report Pydantic models
       rules.py                      # pure demonstration screening
       sbar.py                       # grounding, projection, publication
       persistence.py                # trusted lifecycle/finalization
