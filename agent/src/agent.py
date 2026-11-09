@@ -19,6 +19,7 @@ from livekit.agents import (
 
 from config import Lease, Settings, room_options
 from intake_agent import INSTRUCTIONS, OPENING, Assistant  # noqa: F401
+from log_privacy import install_content_free_logging
 from persistence import Finalizer
 
 load_dotenv(".env.local")
@@ -45,6 +46,7 @@ server = AgentServer(log_level="WARN")
 
 @server.rtc_session(agent_name=os.getenv("LIVEKIT_AGENT_NAME", "call-aid"))
 async def entrypoint(ctx: JobContext):
+    install_content_free_logging()
     try:
         settings = Settings()
         reservation = await rpc(
