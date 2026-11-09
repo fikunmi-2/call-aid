@@ -6,3 +6,9 @@ __pycache__
 .ruff_cache
 .agents
 tests
+debug_intake.py
+scenarios.yaml
+AGENTS.md
+build
+dist
+*.egg-info

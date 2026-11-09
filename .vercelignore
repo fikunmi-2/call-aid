@@ -1,0 +1,21 @@
+# Web deployment only. Keep local credentials, caches and tooling out of uploads.
+.git
+.tools
+.agents
+.codex
+**/.env
+**/.env.*
+**/.venv
+**/node_modules
+**/.next
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/*.egg-info
+**/*.log
+**/*.tsbuildinfo
+**/test-results
+**/playwright-report
+supabase/.temp
+supabase/.branches
+agent

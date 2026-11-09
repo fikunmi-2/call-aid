@@ -1,0 +1,45 @@
+name: Prototype checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.13.7
+          enable-cache: true
+          cache-dependency-glob: agent/uv.lock
+      - name: Python validation
+        working-directory: agent
+        run: |
+          uv sync --locked --python 3.12
+          uv run ruff check src tests export_contract.py
+          uv run ruff format --check src tests export_contract.py
+          uv run pytest
+      - name: Web and database validation
+        working-directory: web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+          pnpm build
+      - name: Public browser checks without cloud credentials
+        working-directory: web
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm test:e2e

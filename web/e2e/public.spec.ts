@@ -40,6 +40,35 @@ test("microphone denial is recoverable", async ({ page }) => {
     page.getByRole("button", { name: "Start Voice Session" }),
   ).toBeEnabled();
 });
+for (const [label, message] of [
+  ["capacity", "The demo is in use. Please try again shortly."],
+  [
+    "usage",
+    "The demonstration usage limit has been reached. Please explore an example report.",
+  ],
+] as const) {
+  test(`${label} exhaustion shows an accurate retry state`, async ({
+    page,
+  }) => {
+    await page.route("**/api/sessions", (route) =>
+      route.fulfill({
+        status: 429,
+        contentType: "application/json",
+        headers: { "Retry-After": "60" },
+        body: JSON.stringify({ error: message }),
+      }),
+    );
+    await page.goto("/demo");
+    await page.getByRole("button", { name: "Start Voice Session" }).click();
+    await expect(page.getByRole("status")).toContainText(message);
+    await expect(
+      page.getByRole("button", { name: "Start Voice Session" }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("link", { name: /Explore synthetic examples/ }),
+    ).toBeVisible();
+  });
+}
 test("landing layout screenshot", async ({ page }, testInfo) => {
   await page.goto("/");
   await page.screenshot({
@@ -88,7 +117,9 @@ test("voice page has controls and no scenario or login gate", async ({
     page.getByRole("button", { name: "Start Voice Session" }),
   ).toBeVisible();
   await expect(
-    page.getByText(/A generalized SBAR draft is prepared during the conversation/),
+    page.getByText(
+      /A generalized SBAR draft is prepared during the conversation/,
+    ),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /Explore synthetic examples/ }),

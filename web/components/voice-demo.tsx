@@ -207,8 +207,9 @@ export function VoiceDemo() {
         <RoomAudioRenderer />
         <div className="voice-panel-note">
           A generalized SBAR draft is prepared during the conversation. At the
-          end, approved records are saved for public review. Publication may be
-          withheld.
+          end, validated reports are saved for public review. Only generalized
+          categories are published; the result below confirms whether saving
+          succeeded.
         </div>
       </section>
       {phase === "ended" && <SessionResult onSaved={clearDraft} />}

@@ -1,10 +1,10 @@
 # Call AId project plan
 
-Status: architecture approved; milestones 1–3 implemented locally, 2026-11-08. See [Milestone 1](MILESTONE_1_REPORT.md), [Milestone 2](MILESTONE_2_REPORT.md) and [Milestone 3](MILESTONE_3_REPORT.md) for results and limitations. Milestone 3's real voice-to-Supabase-to-public-report test passed. Stop before milestone 4; deployment and wider verification require approval.
+Status: milestones 1–3 implemented and milestone 4 authorized on 2026-11-09. Local integration and release preparation are verified; cloud deployment, quota review and final production publication remain pending. See [Milestone 1](MILESTONE_1_REPORT.md), [Milestone 2](MILESTONE_2_REPORT.md), [Milestone 3](MILESTONE_3_REPORT.md) and [Milestone 4](MILESTONE_4_REPORT.md). Obtain owner approval before destructive actions, paid upgrades or production publication. Do not label local integration as hosted acceptance.
 
 ## Repository and revised scope
 
-The original inspection found an empty initialized repository. The workspace now contains independently managed web/agent projects, generated contracts, targeted tests, and three Supabase migrations. LiveKit and Supabase are configured locally; the public records console reads only sanitized published DTOs. README documents tools, pinned starters, setup and remaining deployment work.
+The original inspection found an empty initialized repository. The workspace now contains independently managed web/agent projects, generated contracts, targeted tests, and four applied Supabase migrations. LiveKit and Supabase are configured locally; the public records console reads only sanitized published DTOs. README documents tools, pinned starters, setup and remaining deployment work.
 
 Call AId is a publicly shareable browser research prototype for rural Saskatchewan. There is no login, signup, invited account, user ownership, mandatory scenario selection or acknowledgement form. A visitor clicks **Start Voice Session**, grants the browser's microphone permission, and speaks naturally. Starting a call remains subject to capacity and credit limits, with clear availability messages.
 

@@ -2,7 +2,24 @@
 
 **Not for medical use.** Public browser voice research prototype for rural Saskatchewan. Use fictional information only. No diagnosis, prescription, validated triage, clinical referral, telephone integration or real patient processing.
 
-Milestone 3 adds trusted Supabase persistence and a public records console to the Python-controlled intake, Pydantic validation and simulated screening workflow. No authentication, scenario gate or acknowledgement form.
+Call AId explores whether browser voice AI can help organize symptom intake in rural Saskatchewan. A visitor describes invented symptoms, answers relevant follow-ups, reviews a recap and receives a structured report. It is a demonstration of information capture, with no real patient processing.
+
+Milestones 1–3 provide trusted Supabase persistence and a public records console alongside Python-controlled intake, Pydantic validation and simulated screening. No authentication, scenario gate or acknowledgement form. **Milestone 4 is in preparation; final production publication requires owner approval. Public demo URL: pending deployment.** See [Milestone 4 status](MILESTONE_4_REPORT.md).
+
+## Features and screenshots
+
+- Public landing, browser microphone selection/input meter, mute and end controls.
+- Relevant conditional questions, caller corrections and reviewed spoken recap.
+- Deterministic simulated flags and constrained, validated SBAR templates.
+- Idempotent trusted saves and truthful saved/failed/incomplete outcomes.
+- Public recent-case statistics, formatted reports and JSON, with separate offline examples.
+- Configurable session, concurrency, rate and usage limits; no login or clinical-service integration.
+
+Screenshots contain synthetic data only:
+
+![Desktop landing](docs/screenshots/desktop-home.png)
+
+![Synthetic SBAR example](docs/screenshots/sbar-example.png)
 
 Review the spoken recap, correct important details, confirm it, and let the agent finish its goodbye. It waits for the backend save result, acknowledges the reported concern warmly, wishes you well and explains the actual saved/failed/withheld outcome. A successful saved record is never described as temporary. The room closes after the farewell; clicking End Session or disconnecting early can cut off spoken confirmation, while status polling still recovers the database result. `/demo` shows **Preparing report**, then **View Generated Record** only after a confirmed saved public record. Incomplete, withheld and failed outcomes remain distinct. Approved records expire after seven days; static examples are separately identified and excluded from database statistics. See [Milestone 3](MILESTONE_3_REPORT.md), [closing update](CLOSING_UPDATE.md) and the [migration review](supabase/MIGRATION_REVIEW.md).
 
@@ -22,7 +39,29 @@ The real voice-to-saved-report acceptance check passed with case `b24de479-0742-
 
 Public routes: `/`, `/demo`, `/records`, `/records/[id]`. Records show actual database counts, recent published cases and detailed SBAR, plus separate curated examples for offline review. Public reads do not depend on the voice kill switch. Record routes are dynamic with no-store database fetches; dashboard refreshes every 15 seconds and on focus. Status polling is bounded to about 45 seconds, with a manual retry. All secrets stay server-side. Supabase Auth is unused.
 
-`web/` is Next.js 15 / React 19 / TypeScript / Tailwind 4. `agent/` is Python 3.12+ / LiveKit Agents 1.8 / Pydantic. `supabase/` contains the private session table and service-only RPC migration. No Redis, extra API server, queue or scheduled automation is required for this milestone.
+`web/` is Next.js 15.5.28 / React 19 / TypeScript / Tailwind 4. `agent/` is Python 3.12+ / LiveKit Agents 1.8 / Pydantic. `supabase/` contains private session/record tables and service-only RPCs. No Redis, extra API server, queue or scheduled automation is required. The release patch updates Next.js from 15.5.27 and pins its PostCSS dependency to 8.5.23 to address published security advisories without a framework major upgrade.
+
+### Server environment reference
+
+Use the placeholders in `web/.env.example` and `agent/.env.example`; never commit configured env files or put credentials in `NEXT_PUBLIC_*`.
+
+| Variables | Runtime | Purpose |
+| --- | --- | --- |
+| `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | Web; local agent | `wss://<project>.livekit.cloud` and server credentials |
+| `LIVEKIT_AGENT_NAME` | Both | Matching dispatch name, `call-aid` |
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Both | `https://<project>.supabase.co` and server-only secret/service role |
+| `SESSION_HMAC_SECRET` | Web | At least 32 random bytes for private buckets |
+| `APP_ORIGIN` | Web | Exact canonical website origin; HTTPS when hosted |
+| `DEMO_ENABLED` | Web | `false` disables new calls; records/examples remain readable |
+| `DEV_UNLIMITED_SESSIONS` | Local next-dev only | Cumulative usage bypass; never available on Vercel/production |
+| `MAX_CALL_SECONDS`, `MAX_CONCURRENT_SESSIONS` | Web | Default 180 seconds / 1 active session |
+| `MAX_STARTS_10_MINUTES`, `MAX_STARTS_PER_DAY`, `MAX_GLOBAL_STARTS_PER_DAY` | Web | Default 2 / 5 / 10 starts |
+| `MAX_DAILY_VOICE_SECONDS` | Web | Default 900 reserved voice seconds |
+| `MONTHLY_BUDGET_MICRODOLLARS`, `RESERVED_COST_MICRODOLLARS` | Web | Default 2,000,000 cumulative estimate / 150,000 per reservation |
+| `REALTIME_MODEL`, `REALTIME_VOICE` | Agent | Tested `google/gemini-3.8-live` / `Puck` |
+| `IDLE_SECONDS`, `MAX_USER_TURNS` | Agent | Default 45 seconds / 20 turns |
+
+LiveKit Cloud automatically injects its own LiveKit URL/key/secret into a hosted agent. Do not upload these as agent secrets. Upload Supabase credentials, dispatch name and model/idle settings only.
 
 ## Local setup
 
@@ -82,7 +121,7 @@ uv run src/agent.py dev
 
 No separate STT/TTS plugins or model asset download is required by this realtime configuration. The agent only accepts a room with a valid, single-use server reservation. Normal browser flow creates that reservation. Sending it arbitrary rooms or the generic Playground will be rejected by design.
 
-Click Start Voice Session, permit the microphone, and use headphones. A cold start may take several seconds. Speak an ordinary fictional symptom description. The assistant should continue naturally, ask a short follow-up, refuse actual clinical advice and avoid claiming that a record was saved. The connected screen includes a microphone selector and input-level meter: check that the meter moves while speaking, and choose another input if it stays flat. Use mute or End Session to stop.
+Click Start Voice Session, permit the microphone, and use headphones. A cold start may take several seconds. Speak an ordinary fictional symptom description. The assistant should continue naturally, ask relevant follow-ups, refuse actual clinical advice and confirm saving only after the backend confirms it. The connected screen includes a microphone selector and input-level meter: check that the meter moves while speaking, and choose another input if it stays flat. Review/correct the recap, confirm it and let the goodbye finish. Use mute or End Session to stop.
 
 ## Limits and failure behavior
 
@@ -92,7 +131,9 @@ Configure limits in `web/.env.local`: default one active session, 180-second con
 
 Rate limiting uses server-keyed HMAC network/browser buckets, never raw IP storage. Hosted code trusts Vercel's overwritten `x-vercel-forwarded-for`, not arbitrary forwarding headers; local development shares one network bucket. Shared networks may hit limits collectively. IP/cookie rotation can bypass individual friction; global caps remain. All configuration checks fail closed. `DEMO_ENABLED=false` disables new calls. The active worker still enforces existing deadlines.
 
-Budget reservations are estimates, not exact token-based billing limits. Check actual project credit balance and other development usage before sharing. A busy service, missing configuration or expired credit must leave examples viewable. No automatic paid upgrades. Database/session metadata cleanup and fuller usage reconciliation are deferred; before a long-running public demo add the plan's retention maintenance. No health content is stored meanwhile.
+Budget reservations are estimates, not exact token-based billing limits. Check actual project credit balance and other development usage before sharing. A busy service, missing configuration or expired credit must leave examples viewable. No automatic paid upgrades. Sanitized demonstration records expire after seven days; run the existing trusted cleanup function daily (see below).
+
+**Launch blocker found November 9:** testing already recorded 31 monthly reservations totaling 4,500,100 estimated microdollars, including 21 starts / 3,780 seconds that day. Default production limits would therefore refuse new calls. Do not erase this accounting or enable a production bypass. Confirm the owner's actual plan/remaining credits, then choose bounded cumulative launch thresholds that include existing history. Keep `DEMO_ENABLED=false` until those limits are reviewed. An estimated reservation total is not the actual LiveKit invoice or credit balance.
 
 ## Targeted checks
 
@@ -135,14 +176,18 @@ For a focused, synthetic closing check, use `tests/closing_probe.py` instead of 
 
 Regenerate the shared JSON Schema, controlled value labels and synthetic fixtures after changing Pydantic contracts: from `agent/` in PowerShell, set `$env:PYTHONPATH="src"`, then run `uv run python export_contract.py`. The web validates received JSON at runtime with strict Zod models and approved templates. Python is canonical; cross-language fixtures and targeted tests detect drift. No transcript is sent through the preview channel or stored in browser storage.
 
-## Early deployment configuration
+## Deployment and release
 
-Milestone 1 is ready for a credentialed preview setup; no hosted deployment has been performed in this session.
+Final production publication requires owner approval. No paid upgrade, domain purchase or additional deployment slot is authorized. Current verified status is in [MILESTONE_4_REPORT.md](MILESTONE_4_REPORT.md).
 
-1. Push this repository to your GitHub repository. Connect Vercel with **Root Directory = web**, package manager pnpm, build `pnpm build`. Add the web env variables in Vercel settings. Use a stable preview URL as `APP_ORIGIN` and redeploy after changing it. Microphone access needs HTTPS outside localhost.
-2. Authenticate LiveKit CLI with `lk cloud auth`. From `agent/`, run `lk agent create --help` and create the cloud agent from this Dockerfile using the documented secret-file option for your CLI version. Keep generated `livekit.toml` project/agent IDs; never place secrets in it. Set the same dispatch name in both runtimes.
-3. Add agent secrets from `agent/.env.local` through the CLI/LiveKit console secret settings. Verify the Build plan, model availability and Inference balance. Use a single hosted deployment; no paid deployment slots are needed for this preview.
-4. Apply the Supabase migration, enable new calls, then complete a synthetic HTTPS microphone smoke test: start → assistant heard → visitor heard → mute → end → room removed. Check denied microphone, unavailable worker and rate/deadline failures. Keep examples accessible. Do not describe voice or cloud integration as verified until these pass.
+1. Authenticate Vercel CLI (`vercel login`), inspect existing projects and link the existing [GitHub repository](https://github.com/fikunmi-2/call-aid). Inspect its Git integration before pushing `main`, since a connected production branch can auto-deploy. Configure **Root Directory = web**, **Framework = Next.js**, **Node = 24.x**, install `pnpm install --frozen-lockfile`, build `pnpm build`, default Next.js output. `.vercelignore` excludes local secrets, tools, Python source and caches.
+2. Set server environment variables separately for Preview/Production. Enter secrets through the dashboard or CLI stdin, never literal command-line values. Keep `DEV_UNLIMITED_SESSIONS=false`. Set canonical `APP_ORIGIN=https://<project>.vercel.app`. Preview alone also accepts exact Vercel-provided `VERCEL_URL`/`VERCEL_BRANCH_URL` origins; caller-controlled forwarding headers cannot authorize a site. Production accepts the configured canonical origin only.
+3. Inspect the current LiveKit project with `lk agent list` before creation; current inspection found no hosted agent. From `agent/`, test `uv run src/agent.py start`. After deployment approval, use `lk agent create --region us-east --secrets-file <private-agent-secrets-file>`. The first create uses LiveKit's reserved **production** slot, so obtain owner approval first if production publication is held. `us-east` is the currently documented North American hosting region, not a Canadian-residency guarantee.
+4. Keep generated `agent/livekit.toml` IDs in Git, without secrets. Use `lk agent deploy` for later updates, not another create. Configure only permitted agent secrets through `lk agent update-secrets --secrets-file <private-agent-secrets-file>` without `--overwrite`. Inspect `lk agent status`, `lk agent secrets`, `lk agent versions`, build/deployment logs and the matching `call-aid` dispatch name. Disable recording/transcript exports. No local Docker engine is available here, so a local image build is unverified.
+5. Deploy a Vercel preview with `vercel deploy` **without `--prod`**. Review deployment protection; an owner-protected preview is not a public judge release. Stop every local Python worker for hosted acceptance so it cannot satisfy dispatches. Open the HTTPS preview anonymously, allow microphone, complete an invented intake, correct/confirm recap, hear the warm saved closing, follow **View Generated Record**, and verify the same new case on `/records`. Check database confirmation, safe JSON, freshness, mobile/desktop and failure states. Unrun checks stay unverified.
+6. Present the tested preview, source commit, final limits and migration state for owner approval. Only afterward publish production, verify its canonical HTTPS origin/routes again, push reviewed commits as appropriate, and replace the pending public URL in this README/report. Do not reset hosted Supabase; migrations 001–004 are already applied and its dry run is up to date.
+
+Rollback: disable new sessions with `DEMO_ENABLED=false` and redeploy the web app; records/examples remain readable. Revert to a known web deployment through Vercel and use `lk agent rollback --version <known-version>` when a previous agent version exists. A first agent deployment has no earlier version. Do not roll back by resetting/deleting database data. See [official agent deployment](https://docs.livekit.io/deploy/agents/quickstart/), [secrets](https://docs.livekit.io/deploy/agents/secrets/) and [quotas](https://docs.livekit.io/deploy/admin/quotas-and-limits/).
 
 At initial implementation, cloud credentials were unavailable. Local setup subsequently verified admission, LiveKit audio and structured intake. Milestone 3 verified actual cloud persistence, the public report link, hosted Data API exposure, RLS enablement and service/anonymous role grants. Local env files remain ignored. Broader security/model testing and hosted web/worker deployment remain unverified. See the milestone reports for results. The local dev URL is http://localhost:3001; keep `APP_ORIGIN` equal to the browser URL.
 
@@ -156,4 +201,4 @@ Run `select public.cleanup_demo_records();` through a trusted maintenance connec
 
 Draft contracts remain schema 2.0; confirmed published records use schema 3.0 and publication policy `public-1.0`. `publication`, `record_saved` and saved recommendation text come from the SQL result, never model updates. Existing env files are sufficient: there are **no new application environment variables**. Supabase CLI login/project linking is tooling configuration only.
 
-Review the approved [project plan](PROJECT_PLAN.md). Stop after milestone 3; milestone 4 requires approval. No deployment or authentication is introduced here.
+The GitHub workflow runs cloud-free Python, web, SQL and desktop/mobile browser checks with read-only repository permissions. Its hosted Actions execution is unverified until pushed; cloud simulations remain opt-in. Review the approved [project plan](PROJECT_PLAN.md) and [Milestone 4 report](MILESTONE_4_REPORT.md) for remaining release gates. No user authentication is introduced.
