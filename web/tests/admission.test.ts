@@ -21,6 +21,7 @@ async function reserve({
   rate = 2,
   cost = 150000,
   budget = 2000000,
+  unlimited = false,
 }: {
   network?: string;
   browser?: string;
@@ -28,10 +29,11 @@ async function reserve({
   rate?: number;
   cost?: number;
   budget?: number;
+  unlimited?: boolean;
 } = {}) {
   const id = randomUUID();
   const result = await db.query<{ r: { allowed: boolean; reason?: string } }>(
-    "select public.reserve_demo_session($1,$2,$3,$4,$5,$6,180,$7,$8,5,10,900,$9,$10) r",
+    "select public.reserve_demo_session($1,$2,$3,$4,$5,$6,180,$7,$8,$9,$10,$11,$12,$13) r",
     [
       id,
       `room-${id}`,
@@ -40,8 +42,11 @@ async function reserve({
       network,
       browser,
       concurrency,
-      rate,
-      budget,
+      unlimited ? null : rate,
+      unlimited ? null : 5,
+      unlimited ? null : 10,
+      unlimited ? null : 900,
+      unlimited ? null : budget,
       cost,
     ],
   );
@@ -103,5 +108,15 @@ describe("real PostgreSQL admission functions (PGlite)", () => {
   });
   it("rejects invalid control values", async () => {
     await expect(reserve({ concurrency: 0 })).rejects.toThrow(/invalid limits/);
+  });
+  it("allows unmetered development reservations even after cumulative limits are exceeded", async () => {
+    await db.exec(
+      "update private.demo_sessions set status='failed', reserved_seconds=100000, reserved_cost_units=10000000",
+    );
+    expect((await reserve({ rate: 1, budget: 1 })).allowed).toBe(false);
+    expect((await reserve({ unlimited: true })).allowed).toBe(true);
+  });
+  it("keeps the concurrency guard during unmetered development", async () => {
+    expect((await reserve({ unlimited: true })).reason).toBe("busy");
   });
 });

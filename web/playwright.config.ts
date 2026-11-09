@@ -1,8 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
 export default defineConfig({
   testDir: "./e2e",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     launchOptions: {
       args: [
         "--use-fake-ui-for-media-stream",
@@ -19,7 +20,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:3000",
+    url: baseURL,
     reuseExistingServer: true,
   },
   reporter: "list",

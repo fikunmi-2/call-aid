@@ -24,17 +24,77 @@ function configured() {
   }))
     vi.stubEnv(key, value);
 }
-it("an admitted request dispatches the configured agent and returns a scoped token and private receipt", async () => {
-  configured();
-  const rpc = vi
-    .fn()
-    .mockResolvedValue({
-      data: {
-        allowed: true,
-        expires_at: new Date(Date.now() + 240000).toISOString(),
-      },
+it.each([
+  {
+    environment: "development",
+    hosted: "0",
+    origin: "http://localhost:3000",
+    enabled: true,
+  },
+  {
+    environment: "production",
+    hosted: "0",
+    origin: "http://localhost:3000",
+    enabled: false,
+  },
+  {
+    environment: "development",
+    hosted: "1",
+    origin: "http://localhost:3000",
+    enabled: false,
+  },
+  {
+    environment: "development",
+    hosted: "0",
+    origin: "https://example.org",
+    enabled: false,
+  },
+])(
+  "unmetered flag respects server environment $environment / $hosted / $origin",
+  async ({ environment, hosted, origin, enabled }) => {
+    configured();
+    vi.stubEnv("NODE_ENV", environment);
+    vi.stubEnv("VERCEL", hosted);
+    vi.stubEnv("DEV_UNLIMITED_SESSIONS", "true");
+    vi.stubEnv("APP_ORIGIN", origin);
+    const rpc = vi.fn().mockResolvedValue({
+      data: { allowed: false, reason: "busy" },
       error: null,
     });
+    vi.spyOn(infrastructure, "database").mockReturnValue({
+      rpc,
+    } as unknown as ReturnType<typeof infrastructure.database>);
+    await POST(
+      new NextRequest(origin + "/api/sessions", {
+        method: "POST",
+        headers: { origin, "x-vercel-forwarded-for": "192.0.2.1" },
+      }),
+    );
+    const limits = rpc.mock.calls[0][1];
+    for (const key of [
+      "p_rate",
+      "p_daily",
+      "p_global_daily",
+      "p_daily_seconds",
+      "p_monthly_budget",
+    ]) {
+      if (enabled) expect(limits[key]).toBeNull();
+      else expect(limits[key]).toEqual(expect.any(Number));
+    }
+    expect(limits.p_concurrency).toBeGreaterThan(0);
+    expect(limits.p_call_seconds).toBe(180);
+    expect(limits.p_cost).toBeGreaterThan(0);
+  },
+);
+it("an admitted request dispatches the configured agent and returns a scoped token and private receipt", async () => {
+  configured();
+  const rpc = vi.fn().mockResolvedValue({
+    data: {
+      allowed: true,
+      expires_at: new Date(Date.now() + 240000).toISOString(),
+    },
+    error: null,
+  });
   vi.spyOn(infrastructure, "database").mockReturnValue({
     rpc,
   } as unknown as ReturnType<typeof infrastructure.database>);
@@ -83,12 +143,10 @@ it("an admitted request dispatches the configured agent and returns a scoped tok
 it("denied reservations never create a room or dispatch inference", async () => {
   configured();
   vi.spyOn(infrastructure, "database").mockReturnValue({
-    rpc: vi
-      .fn()
-      .mockResolvedValue({
-        data: { allowed: false, reason: "busy" },
-        error: null,
-      }),
+    rpc: vi.fn().mockResolvedValue({
+      data: { allowed: false, reason: "busy" },
+      error: null,
+    }),
   } as unknown as ReturnType<typeof infrastructure.database>);
   const create = vi.spyOn(RoomServiceClient.prototype, "createRoom");
   const response = await POST(

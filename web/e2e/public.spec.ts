@@ -1,7 +1,17 @@
 import { test, expect } from "@playwright/test";
-test("unconfigured voice fails clearly and examples remain available", async ({
+test("unavailable voice fails clearly and examples remain available", async ({
   page,
 }) => {
+  await page.route("**/api/sessions", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error:
+          "Voice is temporarily unavailable. You can still explore the synthetic example reports.",
+      }),
+    }),
+  );
   await page.goto("/demo");
   await page.getByRole("button", { name: "Start Voice Session" }).click();
   await expect(page.getByRole("status")).toContainText(

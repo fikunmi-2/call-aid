@@ -1,13 +1,21 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Room, RoomEvent } from "livekit-client";
+import {
+  Room,
+  RoomEvent,
+  Track,
+  createLocalAudioTrack,
+  type LocalAudioTrack,
+} from "livekit-client";
 import {
   RoomContext,
   RoomAudioRenderer,
   StartAudio,
   useVoiceAssistant,
   useLocalParticipant,
+  useTrackVolume,
+  useMediaDeviceSelect,
 } from "@livekit/components-react";
 import { Mic, MicOff, PhoneOff, AudioLines, ArrowRight } from "lucide-react";
 type Connection = {
@@ -76,17 +84,18 @@ export function VoiceDemo() {
     busy.current = true;
     setPhase("connecting");
     setMessage("Checking your microphone…");
-    let stream: MediaStream | undefined;
+    let microphone: LocalAudioTrack | undefined;
     try {
       if (!navigator.mediaDevices?.getUserMedia)
         throw new Error(
           "Microphone access needs localhost or an HTTPS browser.",
         );
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false,
+      // Capture once, then publish this exact track. Do not stop and reacquire it.
+      microphone = await createLocalAudioTrack({
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
       });
-      stream.getTracks().forEach((t) => t.stop());
       setMessage(
         "Connecting to the voice assistant. A cold start can take a few moments.",
       );
@@ -101,7 +110,10 @@ export function VoiceDemo() {
       setDeadline(Date.parse(connection.expiresAt));
       active.current = true;
       await room.connect(connection.serverUrl, connection.participantToken);
-      await room.localParticipant.setMicrophoneEnabled(true);
+      await room.localParticipant.publishTrack(microphone, {
+        source: Track.Source.Microphone,
+      });
+      microphone = undefined; // The room now owns the track and stops it on disconnect.
       setPhase("connected");
       setMessage("Connected. Waiting for the assistant…");
     } catch (e) {
@@ -118,7 +130,7 @@ export function VoiceDemo() {
             : "Unable to start voice. Please try again.",
       );
     } finally {
-      stream?.getTracks().forEach((t) => t.stop());
+      microphone?.stop();
       busy.current = false;
     }
   }
@@ -153,6 +165,7 @@ export function VoiceDemo() {
             {phase === "connecting" ? "Connecting…" : "Start Voice Session"}
           </button>
         )}
+        {phase === "connected" && <MicrophoneCheck />}
         <StartAudio label="Enable assistant audio" />
         <RoomAudioRenderer />
         <div className="voice-panel-note">
@@ -177,6 +190,72 @@ function AgentStatus() {
     speaking: "The assistant is speaking.",
   };
   return <>{labels[state] || "Connected."}</>;
+}
+export function MicrophoneCheck() {
+  const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
+  const [error, setError] = useState("");
+  const track = localParticipant.getTrackPublication(
+    Track.Source.Microphone,
+  )?.audioTrack;
+  const volume = useTrackVolume(track);
+  // The hook memoizes its device observer by callback identity. An inline callback
+  // would recreate the subscription on every meter update and cause a render loop.
+  const handleDeviceError = useCallback(
+    () =>
+      setError(
+        "Unable to switch microphones. Check browser permissions and try again.",
+      ),
+    [],
+  );
+  const { devices, activeDeviceId, setActiveMediaDevice } =
+    useMediaDeviceSelect({
+      kind: "audioinput",
+      requestPermissions: false,
+      onError: handleDeviceError,
+    });
+  return (
+    <div className="microphone-check">
+      <label htmlFor="voice-microphone">Microphone</label>
+      <select
+        id="voice-microphone"
+        value={activeDeviceId}
+        onChange={(event) => {
+          setError("");
+          void setActiveMediaDevice(event.target.value).catch(() =>
+            setError(
+              "Unable to switch microphones. Check browser permissions and try again.",
+            ),
+          );
+        }}
+      >
+        <option value="default">
+          {devices.find((device) => device.deviceId === "default")?.label ||
+            "System default microphone"}
+        </option>
+        {devices
+          .filter((device) => device.deviceId && device.deviceId !== "default")
+          .map((device, index) => (
+            <option key={device.deviceId} value={device.deviceId}>
+              {device.label || `Microphone ${index + 1}`}
+            </option>
+          ))}
+      </select>
+      <label htmlFor="voice-microphone-level">
+        {isMicrophoneEnabled ? "Microphone input level" : "Microphone is muted"}
+      </label>
+      <meter
+        id="voice-microphone-level"
+        min={0}
+        max={1}
+        value={isMicrophoneEnabled ? Math.min(1, volume) : 0}
+      />
+      <p>
+        Speak and check that the level moves. If it stays flat, choose another
+        microphone.
+      </p>
+      {error && <p role="alert">{error}</p>}
+    </div>
+  );
 }
 function MicToggle() {
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();

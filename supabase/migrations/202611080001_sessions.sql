@@ -15,6 +15,9 @@ create index demo_session_created on private.demo_sessions(created_at);
 create index demo_session_active on private.demo_sessions(expires_at) where status in ('reserved','active');
 
 create or replace function public.reserve_demo_session(p_id uuid,p_room text,p_identity text,p_receipt text,p_network text,p_browser text,p_call_seconds integer,p_concurrency integer,p_rate integer,p_daily integer,p_global_daily integer,p_daily_seconds integer,p_monthly_budget integer,p_cost integer)
+-- NULL cumulative thresholds mean unlimited. Only trusted service_role can call
+-- this RPC; the web backend permits NULL thresholds only in localhost next dev.
+-- This documents existing SQL NULL behavior; no database migration is required.
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare n timestamptz:=now(); deadline timestamptz; d integer; r integer; g integer; seconds_used bigint; cost_used bigint;
 begin

@@ -1,4 +1,43 @@
 @import "tailwindcss";
+.microphone-check {
+  max-width: 400px;
+  margin: 24px auto 0;
+  padding: 16px;
+  border: 1px solid #dfe5dc;
+  border-radius: 8px;
+  text-align: left;
+}
+.microphone-check label {
+  display: block;
+  font-size: 11px;
+  color: #57704d;
+  margin-bottom: 7px;
+}
+.microphone-check select {
+  display: block;
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #dfe5dc;
+  border-radius: 5px;
+  background: #f8f9f5;
+  color: #183b33;
+  font-size: 12px;
+  margin-bottom: 15px;
+}
+.microphone-check meter {
+  width: 100%;
+  height: 14px;
+  accent-color: #275f4b;
+}
+.microphone-check p {
+  font-size: 11px;
+  color: #6d7873;
+  margin-top: 8px;
+}
+.microphone-check select:focus-visible {
+  outline: 3px solid #91aa59;
+  outline-offset: 3px;
+}
 :root {
   --ink: #183b33;
   --green: #275f4b;

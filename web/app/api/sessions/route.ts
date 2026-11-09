@@ -80,11 +80,13 @@ export async function POST(req: NextRequest) {
       p_browser: bucket(c.SESSION_HMAC_SECRET, browser),
       p_call_seconds: c.MAX_CALL_SECONDS,
       p_concurrency: c.MAX_CONCURRENT_SESSIONS,
-      p_rate: c.MAX_STARTS_10_MINUTES,
-      p_daily: c.MAX_STARTS_PER_DAY,
-      p_global_daily: c.MAX_GLOBAL_STARTS_PER_DAY,
-      p_daily_seconds: c.MAX_DAILY_VOICE_SECONDS,
-      p_monthly_budget: c.MONTHLY_BUDGET_MICRODOLLARS,
+      // NULL disables these cumulative checks in the existing service-only RPC.
+      // Config permits this only for an explicitly enabled localhost dev server.
+      p_rate: c.unlimitedUsage ? null : c.MAX_STARTS_10_MINUTES,
+      p_daily: c.unlimitedUsage ? null : c.MAX_STARTS_PER_DAY,
+      p_global_daily: c.unlimitedUsage ? null : c.MAX_GLOBAL_STARTS_PER_DAY,
+      p_daily_seconds: c.unlimitedUsage ? null : c.MAX_DAILY_VOICE_SECONDS,
+      p_monthly_budget: c.unlimitedUsage ? null : c.MONTHLY_BUDGET_MICRODOLLARS,
       p_cost: c.RESERVED_COST_MICRODOLLARS,
     });
     if (error) throw new Error("database");

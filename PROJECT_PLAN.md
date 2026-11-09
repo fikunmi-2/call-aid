@@ -234,4 +234,4 @@ Changes from the original plan: remove authentication, ownership and scenario ma
 
 Current authorized work: milestone 1 only. Do not begin milestone 2 without approval.
 
-Milestone 1 implementation update: local code, synthetic example library and targeted checks are available. LiveKit/Supabase/Vercel configuration and a live hosted voice smoke test remain pending; no cloud acceptance is claimed. See [MILESTONE_1_REPORT.md](MILESTONE_1_REPORT.md) and [README.md](README.md). Milestone 2 has not started.
+Milestone 1 implementation update: local code, synthetic example library and targeted checks are available. LiveKit/Supabase are now configured locally and a synthetic browser audio smoke test passed. Vercel/hosted-worker deployment acceptance remains pending. See [MILESTONE_1_REPORT.md](MILESTONE_1_REPORT.md) and [README.md](README.md). Milestone 2 has not started.

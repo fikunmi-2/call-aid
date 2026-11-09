@@ -22,5 +22,13 @@ const schema = z.object({
 });
 export function config() {
   if (process.env.DEMO_ENABLED !== "true") throw new Error("disabled");
-  return schema.parse(process.env);
+  const values = schema.parse(process.env);
+  const unlimitedUsage =
+    process.env.DEV_UNLIMITED_SESSIONS === "true" &&
+    process.env.NODE_ENV === "development" &&
+    process.env.VERCEL !== "1" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(
+      new URL(values.APP_ORIGIN).hostname,
+    );
+  return { ...values, unlimitedUsage };
 }
