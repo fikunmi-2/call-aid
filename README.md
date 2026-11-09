@@ -2,19 +2,23 @@
 
 **Not for medical use.** Public browser voice research prototype for rural Saskatchewan. Use fictional information only. No diagnosis, prescription, validated triage, clinical referral, telephone integration or real patient processing.
 
-Milestone 2 adds Python-controlled adaptive intake, Pydantic validation, deterministic simulated screening and a temporary SBAR preview to the public voice application. No authentication, scenario gate or acknowledgement form.
+Milestone 3 adds trusted Supabase persistence and a public records console to the Python-controlled intake, Pydantic validation and simulated screening workflow. No authentication, scenario gate or acknowledgement form.
 
-**New voice conversations generate temporary SBAR reports but do not save or publish them.** Review the spoken recap, correct any important details, then confirm it. A validated generalized preview and JSON appear on `/demo`; refreshing or starting another call clears them. The public records pages still contain static synthetic examples. Saved public reports belong to milestone 3, whose essential test remains a newly completed browser voice conversation producing a saved Supabase report visible in the public console.
+Review the spoken recap, correct important details, confirm it, and end the session. `/demo` shows **Preparing report**, then **View Generated Record** only after receipt-bound status polling confirms a saved public record. Incomplete, withheld and failed outcomes are distinct. A draft is never proof of saving. Public records are readable without accounts; approved records expire after seven days. Static synthetic examples remain separately identified and excluded from database statistics. See [Milestone 3](MILESTONE_3_REPORT.md) for acceptance results and the [migration review](supabase/MIGRATION_REVIEW.md) for the required schema correction.
 
 ## Architecture
 
-Browser → Next.js session endpoint → private Supabase reservation → scoped LiveKit token and named dispatch → Python realtime agent → validated in-memory SBAR → reliable room data → temporary browser preview. The browser publishes microphone audio only; agent recording, text input/output and video are disabled. Only content-free operational session state is persisted. No audio, raw transcripts, symptom content or SBAR records are written to Supabase.
+Browser → Next.js reservation/token → LiveKit realtime agent → Python-validated SBAR and publication gate → atomic Supabase finalization → receipt-bound status → public dashboard/detail. Live drafts remain transient room data. The browser publishes microphone audio only; recording, text input/output and video are disabled. Only sanitized approved SBAR JSON and private operational session state are persisted. No audio, transcripts, rejected narratives or caller identifiers enter database persistence.
 
 `agent/src/intake.py` owns conditional questions, corrections, unknowns, turn limits and review/completion. `intake_schema.py` defines strict Pydantic models; `rules.py` contains versioned simulated markers; `sbar.py` assembles approved templates. `intake_agent.py` connects these to LiveKit tools and committed conversation events. The model interprets meaning and phrases questions; it cannot write database records, choose clinical urgency or supply arbitrary SBAR narratives. The recap must finish playing before a subsequent caller confirmation can mark it reviewed. An interrupted or corrected recap requires another review.
 
-Only bounded categories enter the temporary report. Evidence quotes are checked transiently against the current caller utterance and excluded from workflow facts/reports; the SDK/model necessarily keep conversation and tool context in worker memory until the job ends. The code does not persist that context. A matching quote does not prove semantic accuracy: the caller review and synthetic model checks are necessary, and neither can establish that a real speaker is fictional. Publication is disabled entirely in this milestone. The combination/privacy publication policy must be completed before milestone 3 exposes any new report publicly.
+Only bounded categories enter reports. `publication.py` rejects unsupported concerns, specific combinations, identifying-detail signals and actual clinical-advice requests. It limits associated symptoms to two common categories, background to one common category, and total reported values to twelve. Empty intakes are withheld. Raw values/narratives never enter the public schema. This conservative policy reduces disclosure but proves neither anonymity nor fictional input. Unknowns remain unknown. Quotes and SDK context exist transiently in worker memory and are not persisted.
 
-Public routes: `/`, `/demo`, `/records`, `/records/[id]`. The records pages currently serve curated synthetic examples directly from source, so judges can inspect recognizable SBAR even when services are offline. They never request LiveKit or Supabase credentials. All secrets stay in server modules/env files. Supabase Auth is unused.
+`persistence.py` freezes one candidate and makes bounded identical retries. A service-only SQL transaction locks the session, permits one record, rejects conflicting retries and atomically derives saved metadata/text. The model has no save/publication tool. Failed or withheld cases create no public record. Server reads validate the published schema again before rendering. The `private` schema is not Data API exposed; narrow, explicitly granted `public` RPCs reach it, with an empty function search path. Anonymous/authenticated roles cannot read or write tables or execute these RPCs. [Supabase database functions](https://supabase.com/docs/guides/database/functions).
+
+The real voice-to-saved-report acceptance check passed with case `b24de479-0742-4b02-8aa5-6ff8457b6eb6`. With the local server running, open [that report](http://localhost:3001/records/b24de479-0742-4b02-8aa5-6ff8457b6eb6) before its seven-day expiry. This used actual LiveKit/Supabase services and a synthetic microphone, not preloaded data. Hosted web/worker deployment remains deferred.
+
+Public routes: `/`, `/demo`, `/records`, `/records/[id]`. Records show actual database counts, recent published cases and detailed SBAR, plus separate curated examples for offline review. Public reads do not depend on the voice kill switch. Record routes are dynamic with no-store database fetches; dashboard refreshes every 15 seconds and on focus. Status polling is bounded to about 45 seconds, with a manual retry. All secrets stay server-side. Supabase Auth is unused.
 
 `web/` is Next.js 15 / React 19 / TypeScript / Tailwind 4. `agent/` is Python 3.12+ / LiveKit Agents 1.8 / Pydantic. `supabase/` contains the private session table and service-only RPC migration. No Redis, extra API server, queue or scheduled automation is required for this milestone.
 
@@ -37,7 +41,7 @@ Open http://localhost:3000. Keep `DEMO_ENABLED=false` until the services below a
 
 ### 2. Configure Supabase admission state
 
-Create a development Supabase project. In its SQL editor run [the migration](supabase/migrations/202611080001_sessions.sql), or link the Supabase CLI to that development project and run `supabase db push`. Do not run destructive resets against a hosted database.
+Create a development Supabase project. Review migrations in `supabase/migrations/`, run `pnpm dlx supabase@3.0.0 db push --dry-run --remote` against the linked project, then apply only after approval. For this workspace the owner already applied 001 and 002; 003 corrects the early finalization INSERT. See [migration review](supabase/MIGRATION_REVIEW.md). Do not reapply old SQL or reset the hosted database.
 
 For a disposable local database, start Docker, then from the repository root:
 
@@ -46,7 +50,7 @@ supabase start
 supabase db reset
 ```
 
-The migration creates `private.demo_sessions` with RLS and no anonymous/authenticated grants. Four RPC functions are in `public` for PostgREST routing, but only `service_role` can execute them. Browser clients cannot read the table or execute writes. Server credentials bypass RLS; the trusted routes and SQL functions enforce limits. No public database client or publishable key is needed by the frontend.
+The migrations create `private.demo_sessions` and `private.sbar_records`, with RLS and no anonymous/authenticated grants. Service-only `public` RPCs provide admission, receipt lookup, finalization, public projections and cleanup. Server credentials bypass RLS, so trusted code and SQL enforce limits and publication. No publishable key or browser database client is needed. Operational identifiers and exact timestamps stay private; reports contain generated case labels and generalized Saskatchewan dates. No region is inferred or collected in this version.
 
 Put `SUPABASE_URL` and the server secret/service-role key in **both** `web/.env.local` and `agent/.env.local`. Never use privileged keys in `NEXT_PUBLIC_*`. The SQL functions are the only database boundary used here. Keep the private schema out of Supabase's exposed-schema list.
 
@@ -136,7 +140,7 @@ Milestone 1 is ready for a credentialed preview setup; no hosted deployment has 
 3. Add agent secrets from `agent/.env.local` through the CLI/LiveKit console secret settings. Verify the Build plan, model availability and Inference balance. Use a single hosted deployment; no paid deployment slots are needed for this preview.
 4. Apply the Supabase migration, enable new calls, then complete a synthetic HTTPS microphone smoke test: start → assistant heard → visitor heard → mute → end → room removed. Check denied microphone, unavailable worker and rate/deadline failures. Keep examples accessible. Do not describe voice or cloud integration as verified until these pass.
 
-At initial implementation, cloud credentials were unavailable. Subsequent local setup verified the Supabase session RPC, LiveKit worker registration and synthetic browser audio in both directions. Milestone 2 also verified structured intake and a temporary browser report. Local env files remain ignored. Broader model safety behavior, hosted browser deployment and full hosted RLS testing remain unverified. See the milestone reports for results. The current local dev URL is http://localhost:3001; keep `APP_ORIGIN` equal to the URL used by the browser.
+At initial implementation, cloud credentials were unavailable. Local setup subsequently verified admission, LiveKit audio and structured intake. Milestone 3 verified actual cloud persistence, the public report link, hosted Data API exposure, RLS enablement and service/anonymous role grants. Local env files remain ignored. Broader security/model testing and hosted web/worker deployment remain unverified. See the milestone reports for results. The local dev URL is http://localhost:3001; keep `APP_ORIGIN` equal to the browser URL.
 
 ## Starter and skill provenance
 
@@ -144,4 +148,8 @@ At initial implementation, cloud credentials were unavailable. Subsequent local 
 - Python foundation: [livekit-examples/agent-starter-python](https://github.com/livekit-examples/agent-starter-python), commit `228095c442fcb259c80e9786fc0d7c5534e6af46`. Adapted AgentServer entry point, uv project and Dockerfile to native realtime and server reservations. MIT license retained in `agent/LICENSE`.
 - Official [LiveKit Agent Skills](https://github.com/livekit/agent-skills), commit `e1195b497388b1aecad5dd2e9a0c9bdfbaba1878`, were installed manually by copying their skill directories into `agent/.agents/skills`, as supported by the [installation docs](https://docs.livekit.io/reference/developer-tools/agent-skills/). These are local developer tools excluded from Git; install them locally when needed. No global Codex settings were changed. The project-local CLI is 2.19.3 and installed Python SDK is 1.8.10.
 
-Review the approved [project plan](PROJECT_PLAN.md). Milestone 3 requires separate approval; no SBAR persistence has been implemented.
+Run `select public.cleanup_demo_records();` through a trusted maintenance connection daily (or schedule the same function in Supabase). It deletes up to 500 expired public records per run, clears old receipt/network hashes and keeps current billing-month accounting. Expired records are immediately excluded from reads even before cleanup. Never call cleanup from the browser. Initial retention is seven days; current usage caps make one daily batch sufficient.
+
+Draft contracts remain schema 2.0; confirmed published records use schema 3.0 and publication policy `public-1.0`. `publication`, `record_saved` and saved recommendation text come from the SQL result, never model updates. Existing env files are sufficient: there are **no new application environment variables**. Supabase CLI login/project linking is tooling configuration only.
+
+Review the approved [project plan](PROJECT_PLAN.md). Stop after milestone 3; milestone 4 requires approval. No deployment or authentication is introduced here.

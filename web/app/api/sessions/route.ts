@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
     });
     response.cookies.set("callaid-receipt", receipt, {
       ...options,
-      maxAge: 600,
+        maxAge: 1200,
     });
     return response;
   } catch {

@@ -19,6 +19,7 @@ from livekit.agents import (
 
 from config import Lease, Settings, room_options
 from intake_agent import INSTRUCTIONS, OPENING, Assistant  # noqa: F401
+from persistence import Finalizer
 
 load_dotenv(".env.local")
 logger = logging.getLogger("callaid")
@@ -77,6 +78,9 @@ async def entrypoint(ctx: JobContext):
         )
 
     assistant = Assistant(on_report=send_report, on_finished=stopped.set)
+    finalizer = Finalizer(
+        ctx.room.name, lambda name, values: rpc(settings, name, values)
+    )
     assistant.bind(session)
 
     @ctx.room.on("data_received")
@@ -160,12 +164,6 @@ async def entrypoint(ctx: JobContext):
         outcome = "failed"
         logger.warning("voice_session_failed")
     finally:
-        # Finalize the safe partial state even on timeout/disconnect. Delivery
-        # after a network loss is best effort; there is deliberately no DB retry.
-        try:
-            await assistant.finish_incomplete()
-        except Exception:
-            logger.warning("temporary_summary_unavailable")
         for task in control_tasks:
             task.cancel()
         try:
@@ -182,6 +180,18 @@ async def entrypoint(ctx: JobContext):
             if not room_closed:
                 logger.warning("room_shutdown_unconfirmed")
         if room_closed:
+            # Close/drain the SDK first so edits cannot race the database commit.
+            # An unheard/unprocessed final correction cannot become completed.
+            if (
+                assistant.latest_source
+                and assistant.latest_source.sequence > assistant.workflow.last_sequence
+            ):
+                assistant.workflow.phase = "ended"
+                assistant.workflow.reviewed = False
+            try:
+                await asyncio.wait_for(finalizer.finalize(assistant.workflow), 20)
+            except Exception:
+                logger.warning("record_finalization_unavailable")
             try:
                 await rpc(
                     settings,

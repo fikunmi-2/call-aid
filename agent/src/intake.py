@@ -96,6 +96,7 @@ class IntakeWorkflow:
         self.clarifications: dict[str, int] = {}
         self.information_ids: list[str] = []
         self.record = None
+        self.publication_risk = False
 
     def requirements(self) -> list[str]:
         chief = self.facts.get("chief_complaint")
@@ -217,6 +218,10 @@ class IntakeWorkflow:
         return False
 
     def apply(self, request: TurnRequest, source: SourceTurn) -> Step:
+        # Rejection signals can only narrow publication; never approve it.
+        self.publication_risk |= (
+            request.identifying_details or request.intent == "clinical_advice"
+        )
         if self.phase in ("completed", "ended"):
             raise ValueError("Intake is already closed")
         if source.sequence <= self.last_sequence:
@@ -262,7 +267,7 @@ class IntakeWorkflow:
                 self.phase = "completed"
                 return Step(
                     "completed",
-                    information="Thank you. Your temporary summary is ready on this page. It has not been saved.",
+                    information="Thank you. Your summary is ready. The website will show whether the demonstration report can be saved and published.",
                 )
             return self.prepare_review()
         if request.intent == "recap" or self.turns >= self.max_turns:

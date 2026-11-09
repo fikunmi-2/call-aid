@@ -88,7 +88,7 @@ test("voice page has controls and no scenario or login gate", async ({
     page.getByRole("button", { name: "Start Voice Session" }),
   ).toBeVisible();
   await expect(
-    page.getByText(/A generalized SBAR preview is prepared during the conversation/),
+    page.getByText(/A generalized SBAR draft is prepared during the conversation/),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /Explore synthetic examples/ }),

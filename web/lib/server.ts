@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { createHash, createHmac } from "node:crypto";
-import { config } from "./config";
+import { databaseConfig } from "./config";
 import type { RoomServiceClient } from "livekit-server-sdk";
 export async function deleteRoom(service: RoomServiceClient, room: string) {
   try {
@@ -16,12 +16,16 @@ export async function deleteRoom(service: RoomServiceClient, room: string) {
       throw error;
   }
 }
-export function database(c: ReturnType<typeof config>) {
+export function database(c: ReturnType<typeof databaseConfig>) {
   return createClient(c.SUPABASE_URL, c.SUPABASE_SECRET_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
       fetch: (url, options) =>
-        fetch(url, { ...options, signal: AbortSignal.timeout(8000) }),
+        fetch(url, {
+          ...options,
+          cache: "no-store",
+          signal: AbortSignal.timeout(8000),
+        }),
     },
   });
 }

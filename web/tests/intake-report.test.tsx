@@ -17,6 +17,16 @@ const parse = (value: unknown) =>
 afterEach(cleanup);
 
 describe("transient SBAR contract", () => {
+  it("rejects inherited JavaScript property names as symptom codes", () => {
+    const copy = structuredClone(fixture);
+    copy.situation.facts[0] = {
+      field: "chief_complaint",
+      state: "reported",
+      values: ["constructor"],
+    };
+    copy.situation.text = `Presenting concern: ${Object}.`;
+    expect(parse(copy)).toBeNull();
+  });
   it("accepts the Python completed fixture and deterministic simulated flags", () => {
     const completed = JSON.parse(
       readFileSync(

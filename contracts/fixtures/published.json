@@ -1,0 +1,121 @@
+{
+  "schema_version": "3.0",
+  "workflow_version": "intake-2.0",
+  "rules_version": "demo-rules-1.0",
+  "case_id": "b0000000-0000-4000-8000-000000000002",
+  "demonstration_label": "Demo Case B00000",
+  "started_on": "2026-11-08",
+  "generated_on": "2026-11-08",
+  "status": "completed",
+  "reviewed": true,
+  "not_for_medical_use": true,
+  "publication": "published",
+  "situation": {
+    "text": "Presenting concern: headache.",
+    "facts": [
+      {
+        "field": "chief_complaint",
+        "state": "reported",
+        "values": [
+          "headache"
+        ]
+      }
+    ]
+  },
+  "background": {
+    "text": "Onset: earlier today. Duration: comes and goes. Associated symptoms: light sensitivity. Reported background: no similar episode reported.",
+    "facts": [
+      {
+        "field": "onset",
+        "state": "reported",
+        "values": [
+          "today"
+        ]
+      },
+      {
+        "field": "duration",
+        "state": "reported",
+        "values": [
+          "intermittent"
+        ]
+      },
+      {
+        "field": "associated_symptoms",
+        "state": "reported",
+        "values": [
+          "light_sensitivity"
+        ]
+      },
+      {
+        "field": "background",
+        "state": "reported",
+        "values": [
+          "no_similar_episode"
+        ]
+      }
+    ]
+  },
+  "assessment": {
+    "text": "Progression: getting worse. Severity: severe. Onset pattern: sudden.",
+    "facts": [
+      {
+        "field": "progression",
+        "state": "reported",
+        "values": [
+          "worsening"
+        ]
+      },
+      {
+        "field": "severity",
+        "state": "reported",
+        "values": [
+          "severe"
+        ]
+      },
+      {
+        "field": "onset_pattern",
+        "state": "reported",
+        "values": [
+          "sudden"
+        ]
+      }
+    ],
+    "disclaimer": "User-reported information and simulated flags only; not a diagnosis or validated triage.",
+    "missing_information": [],
+    "simulated_flags": [
+      {
+        "code": "DEMO_SUDDEN_HEADACHE",
+        "label": "Simulated marker: headache with reported sudden onset",
+        "evidence_fields": [
+          "chief_complaint",
+          "onset_pattern"
+        ]
+      },
+      {
+        "code": "DEMO_MAJOR_IMPACT",
+        "label": "Simulated marker: severe symptoms or major activity impact reported",
+        "evidence_fields": [
+          "severity"
+        ]
+      },
+      {
+        "code": "DEMO_WORSENING",
+        "label": "Simulated marker: worsening was reported",
+        "evidence_fields": [
+          "progression"
+        ]
+      }
+    ]
+  },
+  "recommendation": {
+    "text": "The prototype generated and saved this demonstration report. The caller reviewed it. No clinical recommendation was made.",
+    "actions": [
+      "recap_prepared",
+      "caller_reviewed",
+      "record_saved"
+    ],
+    "approved_information_ids": [],
+    "record_saved": true
+  },
+  "publication_policy_version": "public-1.0"
+}

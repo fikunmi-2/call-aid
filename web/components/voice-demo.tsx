@@ -21,6 +21,7 @@ import {
 } from "@livekit/components-react";
 import { Mic, MicOff, PhoneOff, AudioLines, ArrowRight } from "lucide-react";
 import { IntakePreview } from "./intake-preview";
+import { SessionResult } from "./session-result";
 import { parseIntakeReport, type IntakeReport } from "@/lib/intake-report";
 type Connection = {
   serverUrl: string;
@@ -42,35 +43,17 @@ export function VoiceDemo() {
   const [report, setReport] = useState<IntakeReport | null>(null);
   const latestReport = useRef<IntakeReport | null>(null);
   const [reportError, setReportError] = useState("");
-  const endReceipt = useRef<(() => void) | null>(null);
+  const clearDraft = useCallback(() => setReport(null), []);
   const busy = useRef(false),
     active = useRef(false);
   const end = async () => {
-    // Ask for a safe partial preview before closing audio. A network failure
-    // cannot be recovered through persistence until milestone 3.
-    const receipt = new Promise<void>((resolve) => {
-      endReceipt.current = resolve;
-    });
-    try {
-      await room.localParticipant.publishData(new TextEncoder().encode("end"), {
-        reliable: true,
-        topic: "callaid.control.v1",
-      });
-      await Promise.race([
-        receipt,
-        new Promise((resolve) => setTimeout(resolve, 1800)),
-      ]);
-    } catch {
-      /* Disconnect still works when the room is unavailable. */
-    }
-    endReceipt.current = null;
+    // Browser tokens remain unable to publish arbitrary room data. The trusted
+    // end endpoint and participant disconnect trigger agent finalization.
     active.current = false;
     setDeadline(null);
     await room.disconnect();
     setPhase("ended");
-    setMessage(
-      "Session ended. Any temporary summary appears below and has not been saved.",
-    );
+    setMessage("Voice session ended. Your report status appears below.");
     void fetch("/api/sessions/end", { method: "POST" });
   };
   useEffect(() => {
@@ -90,7 +73,6 @@ export function VoiceDemo() {
         setReport(result);
         latestReport.current = result;
         setReportError("");
-        endReceipt.current?.();
       } else
         setReportError(
           "The temporary report could not be validated and is not displayed.",
@@ -104,7 +86,7 @@ export function VoiceDemo() {
         setPhase("ended");
         setMessage(
           latestReport.current
-            ? "Session ended. Your last temporary summary is below. It has not been saved."
+            ? "Voice session ended. Your report status appears below."
             : "The session disconnected. You can restart or explore an example report.",
         );
         void fetch("/api/sessions/end", { method: "POST" });
@@ -224,10 +206,12 @@ export function VoiceDemo() {
         <StartAudio label="Enable assistant audio" />
         <RoomAudioRenderer />
         <div className="voice-panel-note">
-          A generalized SBAR preview is prepared during the conversation. It is
-          temporary, not saved, and not added to the public records dashboard.
+          A generalized SBAR draft is prepared during the conversation. At the
+          end, approved records are saved for public review. Publication may be
+          withheld.
         </div>
       </section>
+      {phase === "ended" && <SessionResult onSaved={clearDraft} />}
       {reportError && <p role="alert">{reportError}</p>}
       {report && <IntakePreview report={report} />}
       <Link href="/records" className="text-link examples-link">

@@ -1,0 +1,327 @@
+{
+  "$defs": {
+    "Assessment": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "maxLength": 2400,
+          "title": "Text",
+          "type": "string"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/Fact"
+          },
+          "maxItems": 12,
+          "title": "Facts",
+          "type": "array"
+        },
+        "disclaimer": {
+          "const": "User-reported information and simulated flags only; not a diagnosis or validated triage.",
+          "default": "User-reported information and simulated flags only; not a diagnosis or validated triage.",
+          "title": "Disclaimer",
+          "type": "string"
+        },
+        "missing_information": {
+          "items": {
+            "enum": [
+              "chief_complaint",
+              "onset",
+              "duration",
+              "progression",
+              "severity",
+              "functional_impact",
+              "associated_symptoms",
+              "background",
+              "onset_pattern",
+              "breathing_difficulty",
+              "vomiting",
+              "sleep_change"
+            ],
+            "type": "string"
+          },
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "simulated_flags": {
+          "items": {
+            "$ref": "#/$defs/SimulatedFlag"
+          },
+          "title": "Simulated Flags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "text",
+        "facts",
+        "missing_information",
+        "simulated_flags"
+      ],
+      "title": "Assessment",
+      "type": "object"
+    },
+    "Fact": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "enum": [
+            "chief_complaint",
+            "onset",
+            "duration",
+            "progression",
+            "severity",
+            "functional_impact",
+            "associated_symptoms",
+            "background",
+            "onset_pattern",
+            "breathing_difficulty",
+            "vomiting",
+            "sleep_change"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "reported",
+            "unknown",
+            "declined"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "field",
+        "state"
+      ],
+      "title": "Fact",
+      "type": "object"
+    },
+    "SavedRecommendation": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "actions": {
+          "items": {
+            "enum": [
+              "recap_prepared",
+              "caller_reviewed",
+              "session_incomplete",
+              "record_saved"
+            ],
+            "type": "string"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "approved_information_ids": {
+          "items": {
+            "enum": [
+              "onset",
+              "severity",
+              "sbar",
+              "cough"
+            ],
+            "type": "string"
+          },
+          "title": "Approved Information Ids",
+          "type": "array"
+        },
+        "record_saved": {
+          "const": true,
+          "default": true,
+          "title": "Record Saved",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "text",
+        "actions",
+        "approved_information_ids"
+      ],
+      "title": "SavedRecommendation",
+      "type": "object"
+    },
+    "Section": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "maxLength": 2400,
+          "title": "Text",
+          "type": "string"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/Fact"
+          },
+          "maxItems": 12,
+          "title": "Facts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "text",
+        "facts"
+      ],
+      "title": "Section",
+      "type": "object"
+    },
+    "SimulatedFlag": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "DEMO_BREATHING_REPORTED",
+            "DEMO_SUDDEN_HEADACHE",
+            "DEMO_MAJOR_IMPACT",
+            "DEMO_WORSENING",
+            "DEMO_INCOMPLETE"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "evidence_fields": {
+          "items": {
+            "enum": [
+              "chief_complaint",
+              "onset",
+              "duration",
+              "progression",
+              "severity",
+              "functional_impact",
+              "associated_symptoms",
+              "background",
+              "onset_pattern",
+              "breathing_difficulty",
+              "vomiting",
+              "sleep_change"
+            ],
+            "type": "string"
+          },
+          "title": "Evidence Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "label",
+        "evidence_fields"
+      ],
+      "title": "SimulatedFlag",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "3.0",
+      "default": "3.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "workflow_version": {
+      "const": "intake-2.0",
+      "default": "intake-2.0",
+      "title": "Workflow Version",
+      "type": "string"
+    },
+    "rules_version": {
+      "const": "demo-rules-1.0",
+      "default": "demo-rules-1.0",
+      "title": "Rules Version",
+      "type": "string"
+    },
+    "case_id": {
+      "format": "uuid",
+      "title": "Case Id",
+      "type": "string"
+    },
+    "demonstration_label": {
+      "pattern": "^Demo Case [A-F0-9]{6}$",
+      "title": "Demonstration Label",
+      "type": "string"
+    },
+    "started_on": {
+      "format": "date",
+      "title": "Started On",
+      "type": "string"
+    },
+    "generated_on": {
+      "format": "date",
+      "title": "Generated On",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "incomplete"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "reviewed": {
+      "title": "Reviewed",
+      "type": "boolean"
+    },
+    "not_for_medical_use": {
+      "const": true,
+      "default": true,
+      "title": "Not For Medical Use",
+      "type": "boolean"
+    },
+    "publication": {
+      "const": "published",
+      "default": "published",
+      "title": "Publication",
+      "type": "string"
+    },
+    "situation": {
+      "$ref": "#/$defs/Section"
+    },
+    "background": {
+      "$ref": "#/$defs/Section"
+    },
+    "assessment": {
+      "$ref": "#/$defs/Assessment"
+    },
+    "recommendation": {
+      "$ref": "#/$defs/SavedRecommendation"
+    },
+    "publication_policy_version": {
+      "const": "public-1.0",
+      "default": "public-1.0",
+      "title": "Publication Policy Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "case_id",
+    "demonstration_label",
+    "started_on",
+    "generated_on",
+    "status",
+    "reviewed",
+    "situation",
+    "background",
+    "assessment",
+    "recommendation"
+  ],
+  "title": "PublishedSBARReport",
+  "type": "object"
+}

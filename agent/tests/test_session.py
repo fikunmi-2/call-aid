@@ -49,7 +49,15 @@ async def test_reserved_audio_session_disables_recording_and_closes_room(delete_
         idle_seconds=45,
         max_user_turns=20,
     )
-    calls = AsyncMock(side_effect=[lease, None])
+
+    async def response(_settings, name, _values):
+        if name == "claim_demo_session":
+            return lease
+        if name == "finalize_demo_record":
+            return {"publication": "withheld"}
+        return None
+
+    calls = AsyncMock(side_effect=response)
     with (
         patch.object(agent, "Settings", return_value=settings),
         patch.object(agent, "rpc", calls),

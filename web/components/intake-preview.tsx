@@ -2,9 +2,14 @@ import { factText, type IntakeReport } from "@/lib/intake-report";
 import { intakeLabels } from "@/lib/intake-values";
 
 export function IntakePreview({ report }: { report: IntakeReport }) {
+  const saved = report.publication === "published";
   return (
     <section className="intake-preview" aria-labelledby="intake-heading">
-      <p className="eyebrow">TEMPORARY INTAKE SUMMARY · NOT SAVED</p>
+      <p className="eyebrow">
+        {saved
+          ? "PUBLISHED DEMONSTRATION REPORT"
+          : "INTAKE DRAFT · NOT YET SAVED"}
+      </p>
       <h2 id="intake-heading">{report.demonstration_label}</h2>
       <p role="status">
         {report.status === "completed"
@@ -12,8 +17,10 @@ export function IntakePreview({ report }: { report: IntakeReport }) {
           : report.status === "review_pending"
             ? "Please review the spoken recap"
             : "Incomplete intake"}
-        . This preview stays on this page and is not published in the records
-        dashboard.
+        .{" "}
+        {saved
+          ? "This sanitized demonstration report is publicly readable."
+          : "This is a draft. The website checks publication and saving after the call."}
       </p>
       <p className="small muted">
         Generalized patient-reported information. Not for medical use.

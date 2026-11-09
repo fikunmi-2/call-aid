@@ -19,7 +19,7 @@ const fact = z
     const invalid =
       item.state === "reported"
         ? item.values.length === 0 ||
-          item.values.some((value) => !(value in allowed)) ||
+          item.values.some((value) => !Object.hasOwn(allowed, value)) ||
           (item.field !== "associated_symptoms" &&
             item.field !== "background" &&
             item.values.length !== 1)
@@ -58,7 +58,8 @@ const flagLabels = {
 } as const;
 const report = z
   .object({
-    schema_version: z.literal("2.0"),
+    schema_version: z.enum(["2.0", "3.0"]),
+    publication_policy_version: z.literal("public-1.0").optional(),
     workflow_version: z.literal("intake-2.0"),
     rules_version: z.literal("demo-rules-1.0"),
     case_id: z.uuid(),
@@ -68,7 +69,7 @@ const report = z
     status: z.enum(["review_pending", "completed", "incomplete"]),
     reviewed: z.boolean(),
     not_for_medical_use: z.literal(true),
-    publication: z.literal("not_published"),
+    publication: z.enum(["not_published", "published"]),
     situation: section,
     background: section,
     assessment: z
@@ -101,13 +102,18 @@ const report = z
         text: z.string().max(600),
         actions: z
           .array(
-            z.enum(["recap_prepared", "caller_reviewed", "session_incomplete"]),
+            z.enum([
+              "recap_prepared",
+              "caller_reviewed",
+              "session_incomplete",
+              "record_saved",
+            ]),
           )
-          .max(3),
+          .max(4),
         approved_information_ids: z
           .array(z.enum(["onset", "severity", "sbar", "cough"]))
           .max(4),
-        record_saved: z.literal(false),
+        record_saved: z.boolean(),
       })
       .strict(),
   })
@@ -142,18 +148,48 @@ const report = z
     if (item.status === "review_pending" && item.reviewed) reject();
     for (const flag of item.assessment.simulated_flags)
       if (flag.label !== flagLabels[flag.code]) reject();
+    const saved = item.publication === "published";
+    if (
+      saved !== item.recommendation.record_saved ||
+      (saved &&
+        (item.schema_version !== "3.0" ||
+          item.publication_policy_version !== "public-1.0" ||
+          item.status === "review_pending")) ||
+      (!saved &&
+        (item.schema_version !== "2.0" ||
+          item.publication_policy_version !== undefined))
+    )
+      reject();
+    const actions = [
+      "recap_prepared",
+      ...(item.reviewed ? ["caller_reviewed"] : []),
+      ...(item.status !== "completed" ? ["session_incomplete"] : []),
+      ...(saved ? ["record_saved"] : []),
+    ];
+    if (JSON.stringify(actions) !== JSON.stringify(item.recommendation.actions))
+      reject();
     const expected =
-      "The prototype prepared a temporary recap." +
+      (saved
+        ? "The prototype generated and saved this demonstration report."
+        : "The prototype prepared a temporary recap.") +
       (item.reviewed
         ? " The caller reviewed it."
         : " It has not been confirmed by the caller.") +
       (item.assessment.missing_information.length
         ? " Important information is incomplete."
         : "") +
-      " No record was saved and no clinical recommendation was made.";
+      (saved
+        ? " No clinical recommendation was made."
+        : " No record was saved and no clinical recommendation was made.");
     if (item.recommendation.text !== expected) reject();
   });
 export type IntakeReport = z.infer<typeof report>;
+export function parsePublishedReport(value: unknown): IntakeReport | null {
+  const result = report.safeParse(value);
+  return result.success && result.data.publication === "published"
+    ? result.data
+    : null;
+}
 export function parseIntakeReport(data: Uint8Array): IntakeReport | null {
   if (data.byteLength > 24000) return null;
   try {

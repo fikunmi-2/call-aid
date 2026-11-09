@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+.record-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin: 1.5rem 0; }
+.record-stats > div { padding: 1.2rem; background: #fff; border: 1px solid #d5ded8; border-radius: 12px; }
+.record-stats strong { display: block; font-size: 2rem; }
+.record-stats span { font-size: .85rem; }
+.record-pages { display: flex; gap: 2rem; margin: 1rem 0; }
+@media(max-width: 600px) { .record-stats { grid-template-columns: repeat(2,1fr); } }
+
 .intake-preview { width: 100%; margin: 2rem 0; padding: clamp(1rem, 4vw, 2rem); border: 1px solid var(--border, #d5ded8); border-radius: 18px; background: #fff; text-align: left; }
 .intake-preview h2 { font-size: 1.8rem; margin: .5rem 0; }
 .intake-preview h3 { font-size: 1.1rem; margin: 1.5rem 0 .7rem; }

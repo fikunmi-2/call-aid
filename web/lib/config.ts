@@ -2,6 +2,11 @@ import "server-only";
 import { z } from "zod";
 const integer = (fallback: number, max = 100000000) =>
   z.coerce.number().int().min(1).max(max).default(fallback);
+export function databaseConfig() {
+  return z
+    .object({ SUPABASE_URL: z.url(), SUPABASE_SECRET_KEY: z.string().min(1) })
+    .parse(process.env);
+}
 const schema = z.object({
   APP_ORIGIN: z.url(),
   LIVEKIT_URL: z.url().refine((v) => v.startsWith("wss://")),

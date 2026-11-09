@@ -118,7 +118,8 @@
             "enum": [
               "recap_prepared",
               "caller_reviewed",
-              "session_incomplete"
+              "session_incomplete",
+              "record_saved"
             ],
             "type": "string"
           },

@@ -164,6 +164,10 @@ class TurnRequest(StrictModel):
     intent: Intent = "continue"
     updates: list[FieldUpdate] = Field(default_factory=list, max_length=12)
     education_topic: EducationTopic | None = None
+    identifying_details: bool = Field(
+        default=False,
+        description="True if the caller supplied a name, contact information, exact location, health identifier or other identifying detail. This can only withhold publication; never use it to approve publication.",
+    )
 
     @model_validator(mode="after")
     def unique_fields(self) -> Self:
@@ -218,7 +222,11 @@ class Assessment(Section):
 
 class Recommendation(StrictModel):
     text: str
-    actions: list[Literal["recap_prepared", "caller_reviewed", "session_incomplete"]]
+    actions: list[
+        Literal[
+            "recap_prepared", "caller_reviewed", "session_incomplete", "record_saved"
+        ]
+    ]
     approved_information_ids: list[EducationTopic]
     record_saved: Literal[False] = False
 
@@ -261,13 +269,19 @@ class SBARReport(StrictModel):
         }
         if self.assessment.simulated_flags != screen(facts, self.status != "completed"):
             raise ValueError("Flags must match the deterministic rules")
+        saved = self.publication == "published"
         actions = (
             ["recap_prepared"]
             + (["caller_reviewed"] if self.reviewed else [])
             + (["session_incomplete"] if self.status != "completed" else [])
+            + (["record_saved"] if saved else [])
         )
         text = (
-            "The prototype prepared a temporary recap."
+            (
+                "The prototype generated and saved this demonstration report."
+                if saved
+                else "The prototype prepared a temporary recap."
+            )
             + (
                 " The caller reviewed it."
                 if self.reviewed
@@ -278,8 +292,24 @@ class SBARReport(StrictModel):
                 if self.assessment.missing_information
                 else ""
             )
-            + " No record was saved and no clinical recommendation was made."
+            + (
+                " No clinical recommendation was made."
+                if saved
+                else " No record was saved and no clinical recommendation was made."
+            )
         )
         if self.recommendation.actions != actions or self.recommendation.text != text:
             raise ValueError("Use approved action templates")
         return self
+
+
+class SavedRecommendation(Recommendation):
+    record_saved: Literal[True] = True
+
+
+class PublishedSBARReport(SBARReport):
+    schema_version: Literal["3.0"] = "3.0"
+    publication_policy_version: Literal["public-1.0"] = "public-1.0"
+    publication: Literal["published"] = "published"
+    status: Literal["completed", "incomplete"]
+    recommendation: SavedRecommendation

@@ -1,10 +1,10 @@
 # Call AId project plan
 
-Status: architecture approved; milestones 1 and 2 implemented locally, 2026-11-08. See [Milestone 1](MILESTONE_1_REPORT.md) and [Milestone 2](MILESTONE_2_REPORT.md) for results and limitations. Milestone 3 has not started and requires approval. Test each milestone, report results and limitations, then stop for approval before the next milestone.
+Status: architecture approved; milestones 1–3 implemented locally, 2026-11-08. See [Milestone 1](MILESTONE_1_REPORT.md), [Milestone 2](MILESTONE_2_REPORT.md) and [Milestone 3](MILESTONE_3_REPORT.md) for results and limitations. Milestone 3's real voice-to-Supabase-to-public-report test passed. Stop before milestone 4; deployment and wider verification require approval.
 
 ## Repository and revised scope
 
-The original inspection found an initialized Git repository with no commits or application source. The workspace now contains this plan and local tool metadata; there is no existing application or database to migrate. Node.js v24.14.1 was on PATH; pnpm, Python, uv, Docker and the LiveKit CLI were not found on PATH during the original inspection. Verify tools again when implementation begins.
+The original inspection found an empty initialized repository. The workspace now contains independently managed web/agent projects, generated contracts, targeted tests, and three Supabase migrations. LiveKit and Supabase are configured locally; the public records console reads only sanitized published DTOs. README documents tools, pinned starters, setup and remaining deployment work.
 
 Call AId is a publicly shareable browser research prototype for rural Saskatchewan. There is no login, signup, invited account, user ownership, mandatory scenario selection or acknowledgement form. A visitor clicks **Start Voice Session**, grants the browser's microphone permission, and speaks naturally. Starting a call remains subject to capacity and credit limits, with clear availability messages.
 
@@ -233,6 +233,6 @@ Check current official docs again when implementing:
 
 Changes from the original plan: remove authentication, ownership and scenario machinery; replace six data tables with two and transient evidence; replace general narratives with sanitized SBAR JSON; move a small Supabase admission slice and first hosted voice smoke test into milestone 1. These adjustments preserve immediate public access, trusted writes, validation, safe errors and budget protection without extra services.
 
-Current authorized work: milestone 1 only. Do not begin milestone 2 without approval.
+Current authorized work: milestone 3 only. Stop before milestone 4.
 
-Milestone 1 implementation update: local code, synthetic example library and targeted checks are available. LiveKit/Supabase are now configured locally and a synthetic browser audio smoke test passed. Vercel/hosted-worker deployment acceptance remains pending. See [MILESTONE_1_REPORT.md](MILESTONE_1_REPORT.md) and [README.md](README.md). Milestone 2 has not started.
+Implementation update: structured intake and public persistence are implemented. A new synthetic browser conversation produced a confirmed completed Supabase record, and its generated link opened the public SBAR report and console entry. Earlier ended calls were saved as incomplete. Migrations 001–003 are applied; 003 was explicitly approved after a hosted dry run. Vercel/hosted-worker deployment and broader verification remain pending. See milestone reports and README.

@@ -99,13 +99,13 @@ export default function Home() {
               n: "02",
               icon: AudioLines,
               title: "Keep the conversation going",
-              text: "Describe a made-up concern, answer relevant questions, and review a temporary SBAR summary.",
+              text: "Describe a made-up concern, answer relevant questions, and review the reported details in a spoken recap.",
             },
             {
               n: "03",
               icon: FileText,
               title: "See the bigger picture",
-              text: "Explore labeled synthetic SBAR examples. Saving new voice reports arrives in milestone 3.",
+              text: "Open your saved demonstration report after the call, or explore the separately labeled synthetic examples.",
             },
           ].map((s) => (
             <article key={s.n}>

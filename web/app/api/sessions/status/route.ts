@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { config } from "@/lib/config";
+import { databaseConfig } from "@/lib/config";
+import { z } from "zod";
 import { database, hash, privateHeaders } from "@/lib/server";
 export async function GET(req: NextRequest) {
   const receipt = req.cookies.get("callaid-receipt")?.value;
@@ -9,13 +10,47 @@ export async function GET(req: NextRequest) {
       { headers: privateHeaders },
     );
   try {
-    const { data, error } = await database(config()).rpc(
+    const { data, error } = await database(databaseConfig()).rpc(
       "demo_session_receipt",
       { p_receipt: hash(receipt) },
     );
     if (error) throw error;
     return NextResponse.json(
-      { status: data?.status || "unavailable", recordAvailable: false },
+      {
+        status:
+          typeof data?.status === "string" &&
+          [
+            "reserved",
+            "active",
+            "aborted",
+            "expired",
+            "failed",
+            "completed",
+            "incomplete",
+          ].includes(data.status)
+            ? data.status
+            : "unavailable",
+        publication: [
+          "pending",
+          "published",
+          "withheld",
+          "failed",
+          "unavailable",
+        ].includes(data?.publication)
+          ? data.publication
+          : "unavailable",
+        recordAvailable:
+          data?.publication === "published" &&
+          z.uuid().safeParse(data?.case_id).success,
+        ...(data?.publication === "published" &&
+        z.uuid().safeParse(data?.case_id).success
+          ? {
+              caseId: data.case_id,
+              caseStatus:
+                data.case_status === "completed" ? "completed" : "incomplete",
+            }
+          : {}),
+      },
       { headers: privateHeaders },
     );
   } catch {
