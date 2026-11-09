@@ -79,6 +79,15 @@ const report = z
           "User-reported information and simulated flags only; not a diagnosis or validated triage.",
         ),
         missing_information: z.array(field).max(12),
+        public_data_handling: z
+          .object({
+            policy_version: z.literal("projection-1.1"),
+            generalized_fields: z.array(field).max(12),
+            details_omitted: z.boolean(),
+          })
+          .strict()
+          .nullable()
+          .optional(),
         simulated_flags: z
           .array(
             z
@@ -148,6 +157,13 @@ const report = z
     if (item.status === "review_pending" && item.reviewed) reject();
     for (const flag of item.assessment.simulated_flags)
       if (flag.label !== flagLabels[flag.code]) reject();
+    const handling = item.assessment.public_data_handling;
+    if (
+      handling &&
+      new Set(handling.generalized_fields).size !==
+        handling.generalized_fields.length
+    )
+      reject();
     const saved = item.publication === "published";
     if (
       saved !== item.recommendation.record_saved ||
@@ -171,7 +187,7 @@ const report = z
     const expected =
       (saved
         ? "The prototype generated and saved this demonstration report."
-        : "The prototype prepared a temporary recap.") +
+        : "The prototype prepared an intake recap.") +
       (item.reviewed
         ? " The caller reviewed it."
         : " It has not been confirmed by the caller.") +

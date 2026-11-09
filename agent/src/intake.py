@@ -251,7 +251,7 @@ class IntakeWorkflow:
             self.phase = "ended"
             return Step(
                 "ended",
-                information="The session has ended. The temporary summary is incomplete and has not been saved.",
+                information="The caller has ended the intake.",
             )
         if request.intent == "confirm" and not changed:
             if self.contradiction():
@@ -267,7 +267,7 @@ class IntakeWorkflow:
                 self.phase = "completed"
                 return Step(
                     "completed",
-                    information="Thank you. Your summary is ready. The website will show whether the demonstration report can be saved and published.",
+                    information="The caller has confirmed the recap.",
                 )
             return self.prepare_review()
         if request.intent == "recap" or self.turns >= self.max_turns:

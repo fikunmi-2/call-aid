@@ -5,6 +5,7 @@ from pathlib import Path
 
 from intake import IntakeWorkflow
 from intake_schema import LABELS, VALUES, Fact, PublishedSBARReport, SBARReport
+from publication import prepare_publication
 from sbar import generate_sbar
 
 root = Path(__file__).resolve().parent.parent
@@ -68,4 +69,27 @@ payload["recommendation"]["text"] = (
 published = PublishedSBARReport.model_validate(payload)
 (directory / "fixtures/published.json").write_text(
     published.model_dump_json(indent=2) + "\n", encoding="utf-8"
+)
+
+# Rich synthetic regression fixture: no arbitrary symptom/background count cap.
+workflow.facts["associated_symptoms"] = Fact(
+    field="associated_symptoms",
+    state="reported",
+    values=["nausea", "light_sensitivity", "dizziness", "weakness"],
+)
+workflow.facts["background"] = Fact(
+    field="background",
+    state="reported",
+    values=[
+        "similar_episode",
+        "sleep_change",
+        "recent_exertion",
+        "health_context",
+        "medication_context",
+    ],
+)
+projected = prepare_publication(generate_sbar(workflow)).model_dump(mode="json")
+projected["generated_on"] = "2026-11-08"
+(directory / "fixtures/projected.json").write_text(
+    json.dumps(projected, indent=2) + "\n", encoding="utf-8"
 )

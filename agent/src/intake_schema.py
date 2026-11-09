@@ -166,7 +166,7 @@ class TurnRequest(StrictModel):
     education_topic: EducationTopic | None = None
     identifying_details: bool = Field(
         default=False,
-        description="True if the caller supplied a name, contact information, exact location, health identifier or other identifying detail. This can only withhold publication; never use it to approve publication.",
+        description="True if the caller supplied a name, contact information, exact location, health identifier or other identifying detail. Never copy these into values. The public projection omits these details; this flag cannot authorize saving.",
     )
 
     @model_validator(mode="after")
@@ -212,12 +212,25 @@ class Section(StrictModel):
         return self
 
 
+class PublicDataHandling(StrictModel):
+    policy_version: Literal["projection-1.1"] = "projection-1.1"
+    generalized_fields: list[FieldName] = Field(default_factory=list, max_length=12)
+    details_omitted: bool = False
+
+    @model_validator(mode="after")
+    def unique_fields(self) -> Self:
+        if len(set(self.generalized_fields)) != len(self.generalized_fields):
+            raise ValueError("Duplicate generalized fields")
+        return self
+
+
 class Assessment(Section):
     disclaimer: Literal[
         "User-reported information and simulated flags only; not a diagnosis or validated triage."
     ] = "User-reported information and simulated flags only; not a diagnosis or validated triage."
     missing_information: list[FieldName]
     simulated_flags: list[SimulatedFlag]
+    public_data_handling: PublicDataHandling | None = None
 
 
 class Recommendation(StrictModel):
@@ -280,7 +293,7 @@ class SBARReport(StrictModel):
             (
                 "The prototype generated and saved this demonstration report."
                 if saved
-                else "The prototype prepared a temporary recap."
+                else "The prototype prepared an intake recap."
             )
             + (
                 " The caller reviewed it."

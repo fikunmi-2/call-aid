@@ -78,16 +78,18 @@ async def test_lost_write_responses_recover_an_existing_confirmed_record():
 
 
 @pytest.mark.asyncio
-async def test_privacy_signal_withholds_without_sending_content_to_database():
+async def test_privacy_signal_preserves_safe_categories_and_marks_omitted_details():
     workflow = finished()
     workflow.publication_risk = True
-    rpc = AsyncMock(return_value={"publication": "withheld"})
+    rpc = AsyncMock(return_value=saved())
     result = await Finalizer("trusted-room", rpc).finalize(workflow)
-    assert result.publication == "withheld" and result.case_id is None
-    assert rpc.call_args.args[1]["p_payload"] is None
+    assert result.publication == "published" and result.case_id == workflow.case_id
+    payload = rpc.call_args.args[1]["p_payload"]
+    assert payload["assessment"]["public_data_handling"]["details_omitted"] is True
+    assert payload["situation"]["facts"][0]["values"] == ["headache"]
 
 
-def test_publication_rejects_specific_combinations_and_uninformative_partials():
+def test_publication_accepts_multiple_symptoms_and_minimal_partials():
     workflow = finished()
     assert validate_publication(generate_sbar(workflow)) is None
     workflow.facts["associated_symptoms"] = Fact(
@@ -95,10 +97,10 @@ def test_publication_rejects_specific_combinations_and_uninformative_partials():
         state="reported",
         values=["nausea", "vomiting", "light_sensitivity"],
     )
-    assert validate_publication(generate_sbar(workflow)) == "specific_combination"
+    assert validate_publication(generate_sbar(workflow)) is None
     empty = IntakeWorkflow()
     empty.finish_incomplete()
-    assert validate_publication(generate_sbar(empty)) == "insufficient_information"
+    assert validate_publication(generate_sbar(empty)) is None
 
 
 @pytest.mark.parametrize(
@@ -110,6 +112,6 @@ def test_publication_rejects_specific_combinations_and_uninformative_partials():
         "call 306-555-0100",
     ],
 )
-def test_obvious_identifier_signals_only_reject(text):
+def test_obvious_identifier_signals_mark_details_for_omission(text):
     assert source_has_identifiers(text)
     assert not source_has_identifiers("A mild cough started yesterday")

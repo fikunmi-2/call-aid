@@ -75,10 +75,11 @@
         "label": "Simulated marker: intake has missing information or is unreviewed",
         "evidence_fields": []
       }
-    ]
+    ],
+    "public_data_handling": null
   },
   "recommendation": {
-    "text": "The prototype prepared a temporary recap. It has not been confirmed by the caller. Important information is incomplete. No record was saved and no clinical recommendation was made.",
+    "text": "The prototype prepared an intake recap. It has not been confirmed by the caller. Important information is incomplete. No record was saved and no clinical recommendation was made.",
     "actions": [
       "recap_prepared",
       "session_incomplete"

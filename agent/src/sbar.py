@@ -69,7 +69,7 @@ def generate_sbar(workflow: IntakeWorkflow) -> SBARReport:
             simulated_flags=screen(facts, not completed),
         ),
         recommendation=Recommendation(
-            text="The prototype prepared a temporary recap."
+            text="The prototype prepared an intake recap."
             + (
                 " The caller reviewed it."
                 if workflow.reviewed

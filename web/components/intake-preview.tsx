@@ -25,6 +25,14 @@ export function IntakePreview({ report }: { report: IntakeReport }) {
       <p className="small muted">
         Generalized patient-reported information. Not for medical use.
       </p>
+      {report.assessment.public_data_handling && (
+        <p className="small muted">
+          Reported information is represented using approved broad categories.
+          {report.assessment.public_data_handling.details_omitted &&
+            " Some details were omitted from this public report. No identifying details or original wording are included."}{" "}
+          Unknown or unprovided answers remain marked below.
+        </p>
+      )}
       {(
         [
           ["Situation", report.situation],

@@ -75,7 +75,7 @@ export function VoiceDemo() {
         setReportError("");
       } else
         setReportError(
-          "The temporary report could not be validated and is not displayed.",
+          "The intake report could not be validated and is not displayed.",
         );
     };
     room.on(RoomEvent.DataReceived, received);

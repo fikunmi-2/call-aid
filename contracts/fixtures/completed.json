@@ -105,10 +105,11 @@
           "progression"
         ]
       }
-    ]
+    ],
+    "public_data_handling": null
   },
   "recommendation": {
-    "text": "The prototype prepared a temporary recap. The caller reviewed it. No record was saved and no clinical recommendation was made.",
+    "text": "The prototype prepared an intake recap. The caller reviewed it. No record was saved and no clinical recommendation was made.",
     "actions": [
       "recap_prepared",
       "caller_reviewed"

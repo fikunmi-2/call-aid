@@ -49,6 +49,17 @@
           },
           "title": "Simulated Flags",
           "type": "array"
+        },
+        "public_data_handling": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PublicDataHandling"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -104,6 +115,46 @@
         "state"
       ],
       "title": "Fact",
+      "type": "object"
+    },
+    "PublicDataHandling": {
+      "additionalProperties": false,
+      "properties": {
+        "policy_version": {
+          "const": "projection-1.1",
+          "default": "projection-1.1",
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "generalized_fields": {
+          "items": {
+            "enum": [
+              "chief_complaint",
+              "onset",
+              "duration",
+              "progression",
+              "severity",
+              "functional_impact",
+              "associated_symptoms",
+              "background",
+              "onset_pattern",
+              "breathing_difficulty",
+              "vomiting",
+              "sleep_change"
+            ],
+            "type": "string"
+          },
+          "maxItems": 12,
+          "title": "Generalized Fields",
+          "type": "array"
+        },
+        "details_omitted": {
+          "default": false,
+          "title": "Details Omitted",
+          "type": "boolean"
+        }
+      },
+      "title": "PublicDataHandling",
       "type": "object"
     },
     "SavedRecommendation": {

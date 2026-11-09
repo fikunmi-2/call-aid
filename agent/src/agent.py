@@ -1,4 +1,4 @@
-"""LiveKit lifecycle and private operational accounting; no case persistence."""
+"""LiveKit lifecycle, trusted persistence and result-grounded spoken closing."""
 
 import asyncio
 import json
@@ -77,9 +77,18 @@ async def entrypoint(ctx: JobContext):
             destination_identities=[lease.identity],
         )
 
-    assistant = Assistant(on_report=send_report, on_finished=stopped.set)
     finalizer = Finalizer(
         ctx.room.name, lambda name, values: rpc(settings, name, values)
+    )
+
+    async def save_before_goodbye(workflow):
+        return await asyncio.wait_for(
+            finalizer.finalize(workflow, keep_active=True),
+            timeout=min(20, lease.remaining()),
+        )
+
+    assistant = Assistant(
+        on_report=send_report, on_finished=stopped.set, on_finalize=save_before_goodbye
     )
     assistant.bind(session)
 
@@ -183,7 +192,8 @@ async def entrypoint(ctx: JobContext):
             # Close/drain the SDK first so edits cannot race the database commit.
             # An unheard/unprocessed final correction cannot become completed.
             if (
-                assistant.latest_source
+                finalizer.result is None
+                and assistant.latest_source
                 and assistant.latest_source.sequence > assistant.workflow.last_sequence
             ):
                 assistant.workflow.phase = "ended"

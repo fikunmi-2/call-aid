@@ -16,6 +16,7 @@ beforeAll(async () => {
     "202611080001_sessions.sql",
     "202611080002_sbar_records.sql",
     "202611080003_record_finalization_fix.sql",
+    "202611090004_save_before_closing.sql",
   ])
     await db.exec(readFileSync(`../supabase/migrations/${file}`, "utf8"));
 });
@@ -110,7 +111,9 @@ describe("trusted record transactions on PostgreSQL", () => {
         s.room,
         null,
         decision,
-        decision === "withheld" ? "specific_combination" : "save_unavailable",
+        decision === "withheld"
+          ? "privacy_or_scope"
+          : "save_unavailable",
       );
       expect(
         (
@@ -192,6 +195,7 @@ describe("trusted record transactions on PostgreSQL", () => {
           "update private.sbar_records set status='completed'",
           "delete from private.sbar_records",
           "select public.finalize_demo_record('x',null,'failed','save_unavailable')",
+          "select public.save_demo_record_for_closing('x',null,'failed','save_unavailable')",
           "select public.read_demo_records()",
           "select public.cleanup_demo_records()",
           "select public.demo_session_receipt('x')",
@@ -216,5 +220,79 @@ describe("trusted record transactions on PostgreSQL", () => {
     } finally {
       await db.exec("reset role");
     }
+  });
+  it("holds capacity through a saved closing and releases it only after room shutdown", async () => {
+    await db.exec(
+      "update private.demo_sessions set status='aborted' where status in ('active','reserved')",
+    );
+    const s = await session();
+    const saved = await db.query<{ r: { publication: string } }>(
+      "select public.save_demo_record_for_closing($1,$2::jsonb,'published',null) r",
+      [s.room, JSON.stringify(s.payload)],
+    );
+    expect(saved.rows[0].r.publication).toBe("published");
+    const held = await db.query<{ status: string; ended_at: unknown }>(
+      "select status,ended_at from private.demo_sessions where id=$1",
+      [s.id],
+    );
+    expect(held.rows[0]).toEqual({ status: "active", ended_at: null });
+    const id = randomUUID();
+    const reserve = async () =>
+      (
+        await db.query<{ r: { allowed: boolean; reason?: string } }>(
+          "select public.reserve_demo_session($1::uuid,$2,'visitor','receipt','network',$1::text,180,1,null,null,null,null,null,100) r",
+          [id, `room-${id}`],
+        )
+      ).rows[0].r;
+    expect(await reserve()).toEqual({ allowed: false, reason: "busy" });
+    await db.query("select public.finish_demo_session($1,'aborted')", [s.room]);
+    expect(
+      (
+        await db.query<{ status: string }>(
+          "select status from private.demo_sessions where id=$1",
+          [s.id],
+        )
+      ).rows[0].status,
+    ).toBe("completed");
+    await db.query(
+      "select public.save_demo_record_for_closing($1,$2::jsonb,'published',null)",
+      [s.room, JSON.stringify(s.payload)],
+    );
+    expect(
+      (
+        await db.query<{ status: string }>(
+          "select status from private.demo_sessions where id=$1",
+          [s.id],
+        )
+      ).rows[0].status,
+    ).toBe("completed");
+    expect((await reserve()).allowed).toBe(true);
+  });
+  it("saves rich projected SBAR JSON and returns it through the public read operation", async () => {
+    const s = await session();
+    const projected = JSON.parse(
+      readFileSync("../contracts/fixtures/projected.json", "utf8"),
+    );
+    projected.case_id = s.payload.case_id;
+    projected.demonstration_label = s.payload.demonstration_label;
+    const result = await finalize(s.room, projected);
+    const report = parsePublishedReport(result.record);
+    expect(report).not.toBeNull();
+    expect(report?.status).toBe("completed");
+    expect(
+      report?.background.facts.find((f) => f.field === "associated_symptoms")
+        ?.values,
+    ).toHaveLength(4);
+    expect(
+      report?.background.facts.find((f) => f.field === "background")?.values,
+    ).toHaveLength(5);
+    expect(report?.assessment.public_data_handling?.details_omitted).toBe(true);
+    expect(report?.recommendation.record_saved).toBe(true);
+    expect(await finalize(s.room, projected)).toEqual(result);
+    const read = await db.query<{ r: { records: unknown[] } }>(
+      "select public.read_demo_records($1,0,20) r",
+      [s.payload.case_id],
+    );
+    expect(read.rows[0].r.records).toEqual([result.record]);
   });
 });

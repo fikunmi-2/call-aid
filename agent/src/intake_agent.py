@@ -8,8 +8,10 @@ from collections.abc import Awaitable, Callable
 from livekit.agents import Agent, RunContext, function_tool
 from livekit.agents.llm import ChatMessage
 
+from closing import CLOSING_INSTRUCTIONS, closing_details
 from intake import IntakeWorkflow, SourceTurn
-from intake_schema import VALUES, TurnRequest
+from intake_schema import VALUES, PublishedSBARReport, TurnRequest
+from persistence import FinalizationResult
 from publication import source_has_identifiers
 from sbar import generate_sbar
 
@@ -66,9 +68,15 @@ diagnoses, or treatment in records. No raw quotations belong in summaries.
 
 Set identifying_details=true when identifying details are volunteered; never
 repeat those details. Publication is decided by a separate deterministic policy.
-You cannot authorize saving. The website checks the actual database result after
-the call. Never claim the record was saved, published, sent to a clinician or
-added to the dashboard yourself. At completion say the tool's closing message.
+You cannot authorize saving or choose its result. On completion, record_turn
+waits for trusted backend persistence and returns closing facts. Until that
+result arrives, do not say the record was saved or available in the console.
+When closing facts arrive, acknowledge the reported concern with brief empathy,
+wish the caller well, explain ONLY the actual saved/failed/withheld outcome,
+and say a friendly goodbye in your own words. Never say temporary or repeat a
+disclaimer in the closing. Do not promise nurse review, clinical follow-up,
+diagnosis, medical reassurance or treatment. Follow the closing instructions
+from the tool; do not repeat the recap or ask another intake question.
 
 Allowed field values (codes: meanings):
 """ + json.dumps(VALUES)
@@ -83,11 +91,15 @@ class Assistant(Agent):
         self,
         on_report: Callable[[dict], Awaitable[None]] | None = None,
         on_finished: Callable[[], None] | None = None,
+        on_finalize: Callable[[IntakeWorkflow], Awaitable[FinalizationResult]]
+        | None = None,
     ):
         super().__init__(instructions=INSTRUCTIONS)
         self.workflow = IntakeWorkflow()
         self.on_report = on_report
         self.on_finished = on_finished
+        self.on_finalize = on_finalize
+        self.final_result: FinalizationResult | None = None
         self.latest_source: SourceTurn | None = None
         self._source_ready = asyncio.Event()
         self._sequence = 0
@@ -129,7 +141,11 @@ class Assistant(Agent):
                     texts.append(item.text_content)
 
     async def emit_report(self):
-        report = generate_sbar(self.workflow)
+        report = (
+            self.workflow.record
+            if isinstance(self.workflow.record, PublishedSBARReport)
+            else generate_sbar(self.workflow)
+        )
         self.workflow.record = report
         if self.on_report:
             try:
@@ -139,7 +155,7 @@ class Assistant(Agent):
             except Exception:
                 # The in-memory report remains valid; a disconnected browser
                 # cannot be promised delivery. No content is logged or queued.
-                logger.warning("temporary_preview_delivery_unavailable")
+                logger.warning("intake_preview_delivery_unavailable")
         return report
 
     async def finish_incomplete(self):
@@ -217,13 +233,31 @@ class Assistant(Agent):
                 return {
                     "error": "Wait for a new caller turn. Do not retry the tool until the caller speaks."
                 }
-        if step.kind in ("review", "completed", "ended"):
-            self._observe_playout(
-                context.speech_handle,
-                review=step.kind == "review",
-                finished=step.kind in ("completed", "ended"),
-            )
         await self.emit_report()
+        if step.kind in ("completed", "ended"):
+            try:
+                self.final_result = (
+                    await self.on_finalize(self.workflow)
+                    if self.on_finalize
+                    else FinalizationResult("failed")
+                )
+            except Exception:
+                logger.warning("closing_persistence_unavailable")
+                self.final_result = FinalizationResult("failed")
+            closing = closing_details(self.workflow, self.final_result)
+            if closing["record_saved"] and isinstance(
+                self.workflow.record, PublishedSBARReport
+            ):
+                await self.emit_report()
+            self._observe_playout(context.speech_handle, finished=True)
+            return {
+                "phase": step.kind,
+                "closing": closing,
+                "record_saved": closing["record_saved"],
+                "instruction": CLOSING_INSTRUCTIONS,
+            }
+        if step.kind == "review":
+            self._observe_playout(context.speech_handle, review=True)
         return {
             "phase": step.kind,
             "next_question": step.question,

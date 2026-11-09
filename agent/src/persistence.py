@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from intake import IntakeWorkflow
 from intake_schema import PublishedSBARReport
-from publication import validate_publication
+from publication import prepare_publication
 from sbar import generate_sbar
 
 
@@ -24,27 +24,40 @@ class Finalizer:
         self.lock = asyncio.Lock()
         self.result: FinalizationResult | None = None
 
-    async def finalize(self, workflow: IntakeWorkflow) -> FinalizationResult:
+    async def finalize(
+        self, workflow: IntakeWorkflow, *, keep_active: bool = False
+    ) -> FinalizationResult:
         async with self.lock:
             if self.result:
                 return self.result
+            operation = (
+                "save_demo_record_for_closing"
+                if keep_active
+                else "finalize_demo_record"
+            )
             workflow.finish_incomplete()
-            report = generate_sbar(workflow)
             try:
-                rejection = validate_publication(report, risk=workflow.publication_risk)
+                report = prepare_publication(
+                    generate_sbar(workflow), risk=workflow.publication_risk
+                )
+                payload = report.model_dump(mode="json")
+                rejection = None
             except Exception:
+                # Invalid application state is a technical failure, never a
+                # reason to send an unvalidated original or invent a fallback.
+                payload = None
                 rejection = "validation_failed"
             values = {
                 "p_room": self.room,
-                "p_payload": None if rejection else report.model_dump(mode="json"),
-                "p_decision": "withheld" if rejection else "published",
+                "p_payload": payload,
+                "p_decision": "failed" if rejection else "published",
                 "p_reason": rejection,
             }
             # Freeze one payload across ambiguous-response retries. The SQL
             # transaction compares it with any existing record, never overwrites.
             for attempt in range(2):
                 try:
-                    data = await self.rpc("finalize_demo_record", values)
+                    data = await self.rpc(operation, values)
                     if data and data.get("publication") == "published":
                         saved = PublishedSBARReport.model_validate(data["record"])
                         if str(saved.case_id) != workflow.case_id:
@@ -65,7 +78,7 @@ class Finalizer:
             # failure only if still pending; SQL never downgrades a saved case.
             try:
                 data = await self.rpc(
-                    "finalize_demo_record",
+                    operation,
                     {
                         "p_room": self.room,
                         "p_payload": None,

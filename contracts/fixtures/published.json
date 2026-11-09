@@ -105,7 +105,8 @@
           "progression"
         ]
       }
-    ]
+    ],
+    "public_data_handling": null
   },
   "recommendation": {
     "text": "The prototype generated and saved this demonstration report. The caller reviewed it. No clinical recommendation was made.",
