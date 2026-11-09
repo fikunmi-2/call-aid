@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { token } from "@/lib/tokens";
 import { POST } from "@/app/api/sessions/route";
 import { GET } from "@/app/api/sessions/status/route";
-import { deleteRoom } from "@/lib/server";
+import { deleteRoom, sameOrigin } from "@/lib/server";
 import type { RoomServiceClient } from "livekit-server-sdk";
 it("already-closed rooms permit cleanup, while uncertain shutdown is not treated as success", async () => {
   const gone = {
@@ -20,6 +20,30 @@ it("already-closed rooms permit cleanup, while uncertain shutdown is not treated
 });
 describe("public session boundaries", () => {
   afterEach(() => vi.unstubAllEnvs());
+  it("allows only trusted Vercel preview origins while keeping production canonical", () => {
+    vi.stubEnv("APP_ORIGIN", "https://call-aid.example");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("VERCEL_URL", "call-aid-build.example");
+    vi.stubEnv("VERCEL_BRANCH_URL", "call-aid-branch.example");
+    const request = (origin: string) =>
+      new Request("https://call-aid.example/api/sessions", {
+        headers: {
+          origin,
+          host: "attacker.example",
+          "x-forwarded-host": "attacker.example",
+        },
+      });
+    expect(sameOrigin(request("https://call-aid-build.example"))).toBe(true);
+    expect(sameOrigin(request("https://call-aid-branch.example"))).toBe(true);
+    expect(sameOrigin(request("https://attacker.example"))).toBe(false);
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(sameOrigin(request("https://call-aid-build.example"))).toBe(false);
+    expect(sameOrigin(request("https://call-aid.example"))).toBe(true);
+    vi.stubEnv("VERCEL", "0");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    expect(sameOrigin(request("https://call-aid-build.example"))).toBe(false);
+  });
   it("issues microphone-only room-scoped tokens with a short lifetime", async () => {
     const secret = "test-secret-that-is-at-least-32-bytes";
     const jwt = await token("test-key", secret, "test-room", "test-visitor");

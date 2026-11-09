@@ -36,9 +36,19 @@ export function bucket(secret: string, value: string) {
   return createHmac("sha256", secret).update(value).digest("hex");
 }
 export function sameOrigin(req: Request) {
+  const origin = req.headers.get("origin");
+  if (
+    origin === new URL(process.env.APP_ORIGIN || "http://localhost:3000").origin
+  )
+    return true;
+  // Preview URLs change on every deploy. Accept only Vercel-provided hosts,
+  // never caller-supplied Host/forwarding headers; production stays canonical.
   return (
-    req.headers.get("origin") ===
-    new URL(process.env.APP_ORIGIN || "http://localhost:3000").origin
+    process.env.VERCEL === "1" &&
+    process.env.VERCEL_ENV === "preview" &&
+    [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL].some(
+      (host) => host && origin === `https://${host}`,
+    )
   );
 }
 export const privateHeaders = { "Cache-Control": "no-store" };
