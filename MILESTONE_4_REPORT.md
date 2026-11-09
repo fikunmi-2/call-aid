@@ -28,7 +28,7 @@ The CLI's first `deploy --yes --verify` invocation automatically targeted produc
 - Committed security/deployment-origin changes as `78b1446` (`fix: patch web dependencies and validate preview origins`). Vercel Git connection was attempted but failed due to GitHub repository access; project inspection confirms no Git link, so pushing code does not trigger this project's production deployment. Connecting the Vercel GitHub app still needs owner repository authorization.
 - Added a small preview-origin guard: only exact Vercel-provided deployment/branch origins are accepted in Preview. Production still requires the configured canonical origin; caller-controlled forwarding headers are ignored. Regression coverage verifies both boundaries.
 - Added `.vercelignore` to exclude secrets, local tools, Python source and caches from web uploads. Tightened agent `.dockerignore` to omit test/debug harnesses and build output. Local env files remain ignored.
-- Added a cloud-free GitHub Actions workflow for the existing Python, web, PostgreSQL and browser checks. Repository permission is read-only. **The workflow has not run on GitHub yet.**
+- Added a cloud-free GitHub Actions workflow for the existing Python, web, PostgreSQL and browser checks. Repository permission is read-only. [Hosted CI run 42703434876](https://github.com/fikunmi-2/call-aid/actions/runs/42703434876) passed on pushed commit `9964cd5`.
 - Added browser capacity/usage-error checks and clarified that the visible report result confirms persistence. No model instructions or clinical behavior changed in Milestone 4.
 - Updated README with features, synthetic screenshots, environment reference, current deployment commands, rollback, maintenance, constraints and an explicitly pending public URL.
 - Configured Preview/Production server credentials via Vercel's supported stdin env workflow, with sensitive keys hidden. Voice is off. Added period-expiring verified historical test offsets so the new bounded release allowance does not require deleting accounting or expanding future periods.
@@ -51,6 +51,8 @@ The CLI's first `deploy --yes --verify` invocation automatically targeted produc
 | Credential scan | No exact configured credential values in tracked/staged files or built browser JS; no forbidden tracked env/tool paths |
 | Production-mode worker smoke | Local named worker registration succeeded; no inference call made by this startup check |
 | GitHub workflow validation | Official actionlint 1.7.12 passed for both workflows; deployment workflow not executed until repository secrets/manual dispatch |
+| Workflow preflight checks | Valid synthetic config passed; missing secret, mismatched project and malformed secret failed without leaking values |
+| GitHub-hosted CI | Passed: Python, web/database, build and browser checks on run 42703434876 |
 | Hosted Preview browser checks | Passed on desktop/mobile through the owner's supported automation bypass: HTTPS routes, real published detail, 14 actual saved cases, clear unknown/incomplete state, origin rejection, disabled-voice 503 and no page errors/overflow |
 | Anonymous Preview access | Redirects to Vercel authentication (302); not reported as public judge access |
 
@@ -74,6 +76,8 @@ These totals are application estimates, **not actual billed usage or a guarantee
 The laptop resolves LiveKit's Oracle upload host to an ISP address serving an expired, unrelated `*.myaccess.coop` certificate. Verified TLS failed in CLI/curl. A diagnostic DNS-over-HTTPS query returned Oracle addresses instead. No DNS, trust-store or TLS verification setting was altered, and no credentialed request was sent after the certificate failure. This is not an application-code build failure.
 
 The owner explicitly requested the official GitHub-hosted deployment action. Repository secrets must be configured directly in GitHub: `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`. The workflow constructs `SECRET_LIST` for supported runtime secret injection, preserves the tested dispatch/model settings, and uploads from GitHub's Ubuntu runner to LiveKit's build service. The local network upload restriction is therefore not on that path. Actual runner success, startup logs and call health remain unverified until the owner adds secrets and runs it.
+
+Commit `9964cd5` (`ci: deploy existing LiveKit agent manually from hosted runner`) was pushed to the existing repository's `main` branch by a normal fast-forward push. The manual workflow is active at [Deploy LiveKit agent (manual)](https://github.com/fikunmi-2/call-aid/actions/workflows/deploy-livekit.yml). The agent deployment was not triggered by the push; only the ordinary prototype checks ran. The owner was given direct GitHub secret-setting and dispatch instructions. No secret values were requested in chat.
 
 Non-sensitive deployment recovery feedback was submitted through the official [LiveKit agent skills](https://github.com/livekit/agent-skills), as required by the local reading-livekit-docs skill/project instructions. The installed skills remain ignored local tooling.
 
