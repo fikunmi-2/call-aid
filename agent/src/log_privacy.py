@@ -26,6 +26,20 @@ class ContentFreeLogs(logging.Filter):
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
+        # SDK retry logs may carry typed errors in args/exc_info. Keep only a
+        # numeric HTTP status from the exception chain, never its message/body.
+        errors = [arg for arg in record.args if isinstance(arg, BaseException)]
+        if record.exc_info:
+            errors.append(record.exc_info[1])
+        status = None
+        for error in errors:
+            for _ in range(5):
+                if error is None:
+                    break
+                code = getattr(error, "status_code", getattr(error, "status", None))
+                if type(code) is int and 100 <= code <= 599:
+                    status = code
+                error = error.__cause__ or error.__context__
         safe = (
             record.name.startswith("callaid")
             and isinstance(record.msg, str)
@@ -40,6 +54,8 @@ class ContentFreeLogs(logging.Filter):
         for key in list(record.__dict__):
             if key not in _STANDARD_FIELDS:
                 del record.__dict__[key]
+        if status is not None:
+            record.http_status = status
         return True
 
 

@@ -2,6 +2,7 @@ import io
 import json
 import logging
 
+from livekit.agents import APIConnectionError, APIStatusError
 from livekit.agents.cli.log import JsonFormatter
 
 from log_privacy import ContentFreeLogs, install_content_free_logging
@@ -56,3 +57,17 @@ def test_install_covers_child_loggers_without_duplicate_filters():
         assert sum(isinstance(f, ContentFreeLogs) for f in handler.filters) == 1
     finally:
         root.removeHandler(handler)
+
+
+def test_retry_logs_retain_only_typed_numeric_status_not_private_error_details():
+    private = "Synthetic private input and provider body"
+    cause = APIStatusError(private, status_code=429, body={"input": private})
+    error = APIConnectionError(private)
+    error.__cause__ = cause
+    record = logging.makeLogRecord(
+        {"name": "livekit.agents", "msg": "Retrying: %s", "args": (error,)}
+    )
+    ContentFreeLogs().filter(record)
+    encoded = JsonFormatter().format(record)
+    assert json.loads(encoded)["http_status"] == 429
+    assert private not in encoded
