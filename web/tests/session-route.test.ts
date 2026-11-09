@@ -7,6 +7,7 @@ import {
 } from "livekit-server-sdk";
 import * as infrastructure from "@/lib/server";
 import { POST } from "@/app/api/sessions/route";
+import { config } from "@/lib/config";
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
@@ -158,4 +159,37 @@ it("denied reservations never create a room or dispatch inference", async () => 
   expect(response.status).toBe(429);
   expect(create).not.toHaveBeenCalled();
   expect(await response.text()).not.toContain("participantToken");
+});
+it("preserves test accounting while automatically expiring day and month offsets", () => {
+  configured();
+  vi.stubEnv("PRIOR_TEST_MONTH", "2026-11");
+  vi.stubEnv("PRIOR_TEST_COST_MICRODOLLARS", "4500100");
+  vi.stubEnv("PRIOR_TEST_DAY", "2026-11-09");
+  vi.stubEnv("PRIOR_TEST_STARTS", "21");
+  vi.stubEnv("PRIOR_TEST_VOICE_SECONDS", "3780");
+  vi.useFakeTimers();
+  try {
+    vi.setSystemTime(new Date("2026-11-09T23:59:59Z"));
+    expect(config()).toMatchObject({
+      MONTHLY_BUDGET_MICRODOLLARS: 6500100,
+      MAX_GLOBAL_STARTS_PER_DAY: 31,
+      MAX_DAILY_VOICE_SECONDS: 4680,
+    });
+    vi.setSystemTime(new Date("2026-11-10T00:00:00Z"));
+    expect(config()).toMatchObject({
+      MONTHLY_BUDGET_MICRODOLLARS: 6500100,
+      MAX_GLOBAL_STARTS_PER_DAY: 10,
+      MAX_DAILY_VOICE_SECONDS: 900,
+    });
+    vi.setSystemTime(new Date("2026-12-01T00:00:00Z"));
+    expect(config()).toMatchObject({
+      MONTHLY_BUDGET_MICRODOLLARS: 2000000,
+      MAX_GLOBAL_STARTS_PER_DAY: 10,
+      MAX_DAILY_VOICE_SECONDS: 900,
+    });
+    vi.stubEnv("PRIOR_TEST_COST_MICRODOLLARS", "-1");
+    expect(() => config()).toThrow();
+  } finally {
+    vi.useRealTimers();
+  }
 });

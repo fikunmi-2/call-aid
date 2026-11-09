@@ -1,0 +1,86 @@
+name: Deploy LiveKit agent (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: call-aid-livekit-agent
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: agent
+    env:
+      LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+      LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+      LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate secrets and existing agent binding
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import tomllib
+          from urllib.parse import urlsplit
+
+          required = ('LIVEKIT_URL', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET',
+                      'SUPABASE_URL', 'SUPABASE_SECRET_KEY')
+          for name in required:
+              value = os.environ.get(name, '')
+              # The official action uses a comma-separated runtime secret list.
+              # Reject accidental quotes/newlines or shell interpolation, never echo values.
+              if not value or value != value.strip() or any(c in value for c in '\r\n,`$"\\'):
+                  raise SystemExit(f'Missing or invalid GitHub Actions secret: {name}')
+          config = tomllib.loads(Path('livekit.toml').read_text())
+          if config['agent']['id'] != 'CA_5zppKdPR3z8g':
+              raise SystemExit('Expected the existing Call AId agent ID; do not create another agent')
+          expected_host = config['project']['subdomain'] + '.livekit.cloud'
+          url = urlsplit(os.environ['LIVEKIT_URL'])
+          if url.scheme != 'wss' or url.hostname != expected_host:
+              raise SystemExit('LIVEKIT_URL must match the project in agent/livekit.toml')
+          if urlsplit(os.environ['SUPABASE_URL']).scheme != 'https':
+              raise SystemExit('SUPABASE_URL must use HTTPS')
+          if not Path('Dockerfile').is_file():
+              raise SystemExit('Missing agent Dockerfile')
+          print('Validated required secrets and the existing agent binding; no secret values printed.')
+          PY
+      - name: Deploy existing agent from GitHub hosted runner
+        # Official livekit/deploy-action v2, pinned to the reviewed commit.
+        uses: livekit/deploy-action@31f4161e507defdf9e99779af95fcaf8c90115eb
+        env:
+          SECRET_LIST: >-
+            SUPABASE_URL=${{ secrets.SUPABASE_URL }},SUPABASE_SECRET_KEY=${{ secrets.SUPABASE_SECRET_KEY }},LIVEKIT_AGENT_NAME=call-aid,REALTIME_MODEL=google/gemini-3.8-live,REALTIME_VOICE=Puck,IDLE_SECONDS=45,MAX_USER_TURNS=20
+        with:
+          OPERATION: deploy
+          WORKING_DIRECTORY: agent
+      - name: Wait for hosted deployment status
+        uses: livekit/deploy-action@31f4161e507defdf9e99779af95fcaf8c90115eb
+        with:
+          OPERATION: status-retry
+          WORKING_DIRECTORY: agent
+          TIMEOUT: 5m
+      - name: Summarize remaining acceptance check
+        shell: bash
+        run: |
+          {
+            echo 'Existing agent CA_5zppKdPR3z8g reported Running after deployment.'
+            echo 'No new agent or paid environment was created by this workflow.'
+            echo 'A real hosted voice-to-saved-report test is still required; status alone does not prove audio or persistence.'
+          } >> "$GITHUB_STEP_SUMMARY"

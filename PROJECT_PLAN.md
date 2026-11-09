@@ -1,6 +1,6 @@
 # Call AId project plan
 
-Status: milestones 1–3 implemented and milestone 4 authorized on 2026-11-09. Local integration and release preparation are verified; cloud deployment, quota review and final production publication remain pending. See [Milestone 1](MILESTONE_1_REPORT.md), [Milestone 2](MILESTONE_2_REPORT.md), [Milestone 3](MILESTONE_3_REPORT.md) and [Milestone 4](MILESTONE_4_REPORT.md). Obtain owner approval before destructive actions, paid upgrades or production publication. Do not label local integration as hosted acceptance.
+Status: milestones 1–3 implemented and milestone 4 authorized on 2026-11-09. The protected HTTPS frontend Preview and Supabase reads are verified. The owner chose manual GitHub-hosted deployment of the existing pending agent after local ISP DNS filtering blocked upload; repository secrets/manual dispatch and full hosted voice acceptance remain pending. Build with $0.00 credit usage is owner-confirmed; bounded, period-expiring test offsets are configured. The first Vercel deployment auto-targeted production; the owner paused it and that state is verified. See [Milestone 4](MILESTONE_4_REPORT.md). Obtain owner approval before destructive actions, paid upgrades or final production publication. Do not label local integration as hosted acceptance.
 
 ## Repository and revised scope
 
