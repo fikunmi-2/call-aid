@@ -1,206 +1,314 @@
 # Call AId
 
-**Not for medical use.** Public browser voice research prototype for rural Saskatchewan. Use fictional information only. No diagnosis, prescription, validated triage, clinical referral, telephone integration or real patient processing.
+Call AId is a voice-first AI healthcare intake prototype developed to explore more accessible symptom information gathering for rural and remote communities. Through natural voice conversations, the system collects structured patient-reported information, applies demonstration screening rules, and generates standardized SBAR reports that can be reviewed through a web-based Records Console.
 
-Call AId explores whether browser voice AI can help organize symptom intake in rural Saskatchewan. A visitor describes invented symptoms, answers relevant follow-ups, reviews a recap and receives a structured report. It is a demonstration of information capture, with no real patient processing.
+> **Not for medical use.** A research demonstration using fictional information only. No diagnosis, treatment advice, clinically validated triage, real patient processing or telephone connectivity.
 
-Milestones 1–3 provide trusted Supabase persistence and a public records console alongside Python-controlled intake, Pydantic validation and simulated screening. No application authentication, scenario gate or acknowledgement form. **Hosted Milestone 4 acceptance passed once:** a new synthetic browser conversation reached the deployed agent, saved a reviewed SBAR in Supabase and opened the same case in the Records Console, without a local worker. A later retest failed before the opening; a realtime connection probe returned HTTP 429, so current voice availability is unresolved. The [tested HTTPS Preview](https://call-nydvy3gmm-call-ai-d.vercel.app) is owner-protected, not anonymous judge access. Vercel is paused again; final production release awaits approval. See [Milestone 4 results](MILESTONE_4_REPORT.md) and the [working manual agent deployment](docs/LIVEKIT_GITHUB_DEPLOY.md).
+**Start here:** scroll through the walkthrough below. No running voice service is needed to understand the prototype. [Technical setup](docs/DEVELOPMENT.md) · [Hosted test evidence](MILESTONE_4_REPORT.md) · [Project plan](PROJECT_PLAN.md)
 
-## Features and screenshots
+## The Problem
 
-- Public landing, browser microphone selection/input meter, mute and end controls.
-- Relevant conditional questions, caller corrections and reviewed spoken recap.
-- Deterministic simulated flags and constrained, validated SBAR templates.
-- Idempotent trusted saves and truthful saved/failed/incomplete outcomes.
-- Public recent-case statistics, formatted reports and JSON, with separate offline examples.
-- Configurable session, concurrency, rate and usage limits; no login or clinical-service integration.
+Distance and travel burden can complicate access to healthcare in rural and remote communities. [CIHI's Canadian travel-burden analysis](https://www.cihi.ca/en/what-is-travel-burden-and-how-does-it-vary-throughout-canada) describes how geography can become an access barrier. Call AId explores one small part of that problem: making initial symptom information easier to express and organize. It does not replace access to a health professional, and improved access or clinical outcomes have not been established by this prototype.
 
-Screenshots contain synthetic data only:
+## Our Solution
 
-![Desktop landing](docs/screenshots/desktop-home.png)
+A person speaks naturally instead of completing a long intake form. The assistant asks relevant follow-up questions, checks important details through a spoken recap and turns validated, generalized responses into an SBAR report: **Situation, Background, Assessment and Recommendation**.
 
-![Synthetic SBAR example](docs/screenshots/sbar-example.png)
+The current implementation runs in a **web browser with a microphone**. The long-term concept includes ordinary telephone calls, but there is no implemented phone number, SIP/telephone connection, emergency integration or referral pathway. The current Records Console is public and contains sanitized demonstrations only.
 
-Review the spoken recap, correct important details, confirm it, and let the agent finish its goodbye. It waits for the backend save result, acknowledges the reported concern warmly, wishes you well and explains the actual saved/failed/withheld outcome. A successful saved record is never described as temporary. The room closes after the farewell; clicking End Session or disconnecting early can cut off spoken confirmation, while status polling still recovers the database result. `/demo` shows **Preparing report**, then **View Generated Record** only after a confirmed saved public record. Incomplete, withheld and failed outcomes remain distinct. Approved records expire after seven days; static examples are separately identified and excluded from database statistics. See [Milestone 3](MILESTONE_3_REPORT.md), [closing update](CLOSING_UPDATE.md) and the [migration review](supabase/MIGRATION_REVIEW.md).
+## How It Works
 
-## Architecture
+1. **Open the website.** Review the research notice; no account, scenario selection or acknowledgement form is required.
+2. **Start a voice session.** The browser requests microphone permission. The Next.js server checks capacity and budget, reserves a session and issues a short-lived, room-scoped LiveKit token.
+3. **Describe an invented concern.** The hosted Python agent asks one relevant question at a time about onset, progression, impact, associated symptoms and context.
+4. **Review and correct.** Python validates structured updates with Pydantic. The assistant recaps the reported information and invites corrections; unknowns remain unknown.
+5. **Generate SBAR.** Versioned Python rules produce simulated flags. Approved templates assemble the public report from validated categories, without unrestricted AI narratives.
+6. **Save through Supabase.** Trusted server-side functions finalize one stable case per session, including safe incomplete cases. Saving/publication status comes from the actual database result.
+7. **Open the report.** The browser checks final status and shows **View Generated Record** only after a confirmed save. The same case appears in the Records Console.
 
-Browser → Next.js reservation/token → LiveKit realtime agent → Python-validated SBAR and publication gate → atomic Supabase finalization → receipt-bound status → public dashboard/detail. Live drafts remain transient room data. The browser publishes microphone audio only; recording, text input/output and video are disabled. Only sanitized approved SBAR JSON and private operational session state are persisted. No audio, transcripts, rejected narratives or caller identifiers enter database persistence.
+**Journey:** Landing → Voice Session → Guided Intake → SBAR → Supabase → Records Console → Detailed Report.
 
-`agent/src/intake.py` owns conditional questions, corrections, unknowns, turn limits and review/completion. `intake_schema.py` defines strict Pydantic models; `rules.py` contains versioned simulated markers; `sbar.py` assembles approved templates. `intake_agent.py` connects these to LiveKit tools and committed conversation events. The model interprets meaning and phrases questions; it cannot write database records, choose clinical urgency or supply arbitrary SBAR narratives. The recap must finish playing before a subsequent caller confirmation can mark it reviewed. An interrupted or corrected recap requires another review.
+## Application Screenshots
 
-Only bounded categories enter reports. `publication.py` preserves all schema-approved symptom/background categories without count or combination rejection rules. Specific details map to an approved broader category (including fixed “other” templates), or remain unknown when no faithful mapping exists. Identifying details and original wording never enter the public schema. Safe partial or empty intakes can save as incomplete reports. `assessment.public_data_handling` records projection policy `projection-1.1`, generalized fields and whether details were omitted; the console explains these reductions. This reduces disclosure but proves neither anonymity nor fictional input. Quotes and SDK context exist transiently in worker memory and are not persisted. Invalid schema/session state or database failure cannot produce a success claim. See [publication changes and verified new test cases](PUBLICATION_UPDATE.md). No migration or environment change is needed for this policy update.
+All shown information is synthetic. Fresh captures use the actual local production build and existing hosted demonstration records. The voice and intake images are **genuine archival milestone captures**, identified below; they do not imply that inference is available today. No new inference session was started for these screenshots. [Capture provenance and dimensions](docs/SCREENSHOTS.md).
 
-`persistence.py` freezes one candidate and makes bounded identical retries. A service-only SQL transaction locks the session, permits one record, rejects conflicting retries and atomically derives saved metadata/text. The model has no save/publication tool. Failed or withheld cases create no public record. Server reads validate the published schema again before rendering. The `private` schema is not Data API exposed; narrow, explicitly granted `public` RPCs reach it, with an empty function search path. Anonymous/authenticated roles cannot read or write tables or execute these RPCs. [Supabase database functions](https://supabase.com/docs/guides/database/functions).
+### 1. Landing page
 
-Migration 004 adds `save_demo_record_for_closing`: confirmed records can save while audio remains connected, but the active capacity reservation is held until room shutdown. The model receives only trusted closing facts (`record_saved`, public availability, record status and the generalized reported concern), never authority to choose a save result. `finish_demo_session` releases capacity using the stored case status. Post-disconnect finalization remains the fallback. The intake workflow, screening rules and SBAR structure are unchanged; only draft recommendation wording drops “temporary.”
+![Call AId landing page](docs/screenshots/home.png)
 
-The real voice-to-saved-report acceptance check passed with case `b24de479-0742-4b02-8aa5-6ff8457b6eb6`. With the local server running, open [that report](http://localhost:3001/records/b24de479-0742-4b02-8aa5-6ff8457b6eb6) before its seven-day expiry. This used actual LiveKit/Supabase services and a synthetic microphone, not preloaded data. Hosted web/worker deployment remains deferred.
+The entry point explains the idea, displays the research boundary and offers routes into voice or records without an account.
 
-Public routes: `/`, `/demo`, `/records`, `/records/[id]`. Records show actual database counts, recent published cases and detailed SBAR, plus separate curated examples for offline review. Public reads do not depend on the voice kill switch. Record routes are dynamic with no-store database fetches; dashboard refreshes every 15 seconds and on focus. Status polling is bounded to about 45 seconds, with a manual retry. All secrets stay server-side. Supabase Auth is unused.
+### 2. Connected voice session — archival
 
-`web/` is Next.js 15.5.28 / React 19 / TypeScript / Tailwind 4. `agent/` is Python 3.12+ / LiveKit Agents 1.8 / Pydantic. `supabase/` contains private session/record tables and service-only RPCs. No Redis, extra API server, queue or scheduled automation is required. The release patch updates Next.js from 15.5.27 and pins its PostCSS dependency to 8.5.23 to address published security advisories without a framework major upgrade.
+![Genuine earlier connected browser voice session](docs/screenshots/voice-session.png)
 
-### Server environment reference
+An actual earlier milestone browser connection with synthetic microphone input, showing the assistant speaking and mute/end controls. This is a historical interface capture; the current implementation also includes microphone selection and an input meter. It is not a newly simulated connection or evidence of current credit availability.
 
-Use the placeholders in `web/.env.example` and `agent/.env.example`; never commit configured env files or put credentials in `NEXT_PUBLIC_*`.
+### 3. Guided intake — archival structured output
 
-| Variables | Runtime | Purpose |
-| --- | --- | --- |
-| `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | Web; local agent | `wss://<project>.livekit.cloud` and server credentials |
-| `LIVEKIT_AGENT_NAME` | Both | Matching dispatch name, `call-aid` |
-| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Both | `https://<project>.supabase.co` and server-only secret/service role |
-| `SESSION_HMAC_SECRET` | Web | At least 32 random bytes for private buckets |
-| `APP_ORIGIN` | Web | Exact canonical website origin; HTTPS when hosted |
-| `DEMO_ENABLED` | Web | `false` disables new calls; records/examples remain readable |
-| `DEV_UNLIMITED_SESSIONS` | Local next-dev only | Cumulative usage bypass; never available on Vercel/production |
-| `MAX_CALL_SECONDS`, `MAX_CONCURRENT_SESSIONS` | Web | Default 180 seconds / 1 active session |
-| `MAX_STARTS_10_MINUTES`, `MAX_STARTS_PER_DAY`, `MAX_GLOBAL_STARTS_PER_DAY` | Web | Default 2 / 5 / 10 starts |
-| `MAX_DAILY_VOICE_SECONDS` | Web | Default 900 reserved voice seconds |
-| `MONTHLY_BUDGET_MICRODOLLARS`, `RESERVED_COST_MICRODOLLARS` | Web | Default 2,000,000 cumulative estimate / 150,000 per reservation |
-| `REALTIME_MODEL`, `REALTIME_VOICE` | Agent | Tested `google/gemini-3.8-live` / `Puck` |
-| `IDLE_SECONDS`, `MAX_USER_TURNS` | Agent | Default 45 seconds / 20 turns |
-| `PRIOR_TEST_MONTH`, `PRIOR_TEST_COST_MICRODOLLARS` | Web, optional | Verified retained test cost offset; applies only during that UTC month |
-| `PRIOR_TEST_DAY`, `PRIOR_TEST_STARTS`, `PRIOR_TEST_VOICE_SECONDS` | Web, optional | Verified retained global test totals; apply only during that UTC day |
+![Validated reported intake fields from an earlier synthetic voice conversation](docs/screenshots/intake.png)
 
-LiveKit Cloud automatically injects its own LiveKit URL/key/secret into a hosted agent. Do not upload these as agent secrets. Upload Supabase credentials, dispatch name and model/idle settings only.
+Reported details from a genuine Milestone 2 conversation: headache, onset, duration, associated symptoms, background and severity. This is a crop of its structured-output view, not a text-chat transcript. The conversation itself is spoken. Later milestones added confirmed database persistence; this image does not claim that this earlier intake was saved.
 
-## Local setup
+### 4. Records Console
 
-Install Node.js 24, pnpm 9.15.9, Python 3.12 and uv. LiveKit CLI is needed for cloud configuration/deployment. Docker plus Supabase CLI are needed only to run the full local Supabase stack; the targeted SQL tests also run through PGlite without Docker.
+![Actual generated demonstration records and database statistics](docs/screenshots/records.png)
 
-Dependencies are pinned by `web/pnpm-lock.yaml` and `agent/uv.lock`. This session downloaded project-local tools into ignored `.tools/`; they are not part of the portable project. Normal installed `pnpm`, `uv` and `lk` work with the commands below.
+The current console reads actual published demonstration records from Supabase, separates completed and incomplete cases, and labels simulated flags. Snapshot: 16 generated records, including 4 completed cases. Preloaded examples are separately labelled further down the page and excluded from these statistics. Counts are not real patient activity.
 
-### 1. Explore the website and fixtures without credentials
+### 5. Saved SBAR report
+
+![Saved reviewed SBAR report for a synthetic headache conversation](docs/screenshots/sbar-report.png)
+
+This is case `696a540c-beed-4696-a989-de6f2c08b039`, created by the verified hosted voice test. Its approved public JSON was independently read and validated after saving. Reported facts, simulated screening and prototype actions are distinct; the Recommendation accurately says the report was saved. Generated records expire after seven days, so the screenshot remains useful after the case URL expires.
+
+### 6. Responsive mobile report
+
+<img src="docs/screenshots/mobile.png" alt="The same saved synthetic SBAR report on a narrow mobile viewport" width="340" />
+
+The same report at a 390-pixel mobile viewport, with stacked fields and readable section headings. This verifies responsive rendering, not a physical mobile microphone test.
+
+## Core Features
+
+| Feature | Implementation |
+| --- | --- |
+| Browser voice conversation | LiveKit audio transport and a named Python agent; microphone selector, input meter, mute/end controls |
+| Guided intake | Adaptive questions, validated field updates, corrections, unknown/declined values and reviewed recap |
+| Screening simulation | Separate deterministic, versioned Python rules; no clinical urgency or safety clearance |
+| SBAR generation | Pydantic contracts and approved templates grounded in caller-reported categories |
+| Supabase persistence | JSONB public projection, one record per session, idempotent finalization and truthful save results |
+| Records Console | Public list/detail routes, actual statistics, completed/incomplete states and dynamic refresh |
+| Offline exploration | Curated synthetic examples available without a voice connection or cloud credentials |
+| Infrastructure controls | Server-only secrets, restricted tokens, trusted database writes, configurable admission limits and kill switch |
+
+Public routes: `/` · `/demo` · `/records` · `/records/[id]`. “Public” describes application behavior; the current hosted Preview is additionally protected by Vercel pending release approval.
+
+## Technology Stack
+
+| Layer | Technology |
+| --- | --- |
+| Web interface | Next.js 15.5.28, React 19, TypeScript, Tailwind CSS 4 |
+| Voice transport / hosting | LiveKit Cloud and Python LiveKit Agents SDK |
+| Realtime voice model | Gemini through LiveKit Inference; tested configuration `google/gemini-3.8-live`, voice `Puck` |
+| Workflow and validation | Python 3.12, Pydantic, deterministic rules; runtime Zod validation in the web app |
+| Storage | Supabase PostgreSQL, private tables and service-only RPC functions |
+| Web deployment | Vercel, with `web/` as the project root |
+| Delivery and testing | GitHub Actions, pnpm, uv, pytest, Ruff, Vitest, PGlite and Playwright |
+
+The project adapts the official [LiveKit React/Next.js starter](https://github.com/livekit-examples/agent-starter-react) and [Python starter](https://github.com/livekit-examples/agent-starter-python). Licenses and pinned upstream revisions are recorded in the [developer guide](docs/DEVELOPMENT.md#starter-and-skill-provenance).
+
+## System Architecture
+
+```mermaid
+flowchart TD
+    B[Browser: React voice interface] -->|Start / status requests| W[Next.js server on Vercel]
+    W -->|Atomic admission and usage reservation| D[(Supabase PostgreSQL)]
+    W -->|Room-scoped token| B
+    B <-->|WebRTC audio| L[LiveKit Cloud room]
+    W -->|Named dispatch: call-aid| L
+    L <--> A[Hosted Python LiveKit agent]
+    A <--> I[LiveKit Inference: Gemini realtime]
+    A --> P[Pydantic intake state and caller review]
+    P --> R[Deterministic simulated rules and approved SBAR templates]
+    R -->|Sanitized projection / trusted finalization RPC| D
+    D -->|Published DTOs only| W
+    W --> C[Public Records Console and SBAR detail]
+    W -->|Content-free save status| B
+    E[Preloaded synthetic examples] --> C
+```
+
+The model phrases questions and proposes updates; Python controls state, validation and completion. Database confirmation controls saved/publication fields. Private session bookkeeping stays separate from the public JSON. Supabase's `private` schema is not exposed through the Data API: narrowly granted `public` RPC functions access it using trusted server credentials. No anonymous table access or browser writes.
+
+Public reports contain generated case labels and generalized categories/dates, not caller-supplied names, exact locations or raw transcripts. Broad regional information is possible in curated examples; generated voice records currently leave region uncollected. Unsupported details are generalized or omitted, never invented. Audio and transcripts are not stored by the application; cloud audio processing still occurs. This is not a privacy or Canadian-residency guarantee.
+
+## Example SBAR Output
+
+An **abbreviated excerpt** from the repository's [full synthetic published fixture](contracts/fixtures/published.json). Omitted fact arrays/version fields are present in the full schema-valid file. This fixture is an example, not a database write or a real patient record.
+
+```json
+{
+  "schema_version": "3.0",
+  "case_id": "b0000000-0000-4000-8000-000000000002",
+  "demonstration_label": "Demo Case B00000",
+  "status": "completed",
+  "reviewed": true,
+  "publication": "published",
+  "situation": {
+    "text": "Presenting concern: headache."
+  },
+  "background": {
+    "text": "Onset: earlier today. Duration: comes and goes. Associated symptoms: light sensitivity. Reported background: no similar episode reported."
+  },
+  "assessment": {
+    "disclaimer": "User-reported information and simulated flags only; not a diagnosis or validated triage.",
+    "missing_information": [],
+    "simulated_flags": [
+      {
+        "code": "DEMO_SUDDEN_HEADACHE",
+        "label": "Simulated marker: headache with reported sudden onset",
+        "evidence_fields": [
+          "chief_complaint",
+          "onset_pattern"
+        ]
+      },
+      {
+        "code": "DEMO_MAJOR_IMPACT",
+        "label": "Simulated marker: severe symptoms or major activity impact reported",
+        "evidence_fields": [
+          "severity"
+        ]
+      },
+      {
+        "code": "DEMO_WORSENING",
+        "label": "Simulated marker: worsening was reported",
+        "evidence_fields": [
+          "progression"
+        ]
+      }
+    ]
+  },
+  "recommendation": {
+    "record_saved": true,
+    "text": "The prototype generated and saved this demonstration report. The caller reviewed it. No clinical recommendation was made."
+  }
+}
+```
+
+The canonical [Pydantic models](agent/src/intake_schema.py) generate [JSON Schema](contracts/sbar.schema.json). `publication`, `record_saved` and saved recommendation text are derived from trusted persistence results, not selected by the language model.
+
+## Project Structure
+
+```text
+call-aid/
+├── web/                    # Next.js pages, voice controls, server APIs and tests
+│   ├── app/                # Landing, demo, records, SBAR details and session APIs
+│   ├── components/         # Microphone, report and result views
+│   ├── lib/                # Admission, trusted DB access and strict public DTOs
+│   └── e2e/                # Cloud-free desktop/mobile browser checks
+├── agent/                  # Independent Python/uv project and LiveKit container
+│   ├── src/                # Intake workflow, schemas, rules, SBAR and persistence
+│   └── tests/              # Workflow, privacy, validation and persistence tests
+├── contracts/              # Generated schema, approved labels and synthetic fixtures
+├── supabase/migrations/    # Append-only database migrations 001–004
+├── docs/                   # Screenshots, setup and manual deployment guide
+└── .github/workflows/      # Cloud-free CI and manual LiveKit deployment
+```
+
+## Getting Started Locally
+
+### Prerequisites
+
+Git, Node.js 24, pnpm 9.15.9, Python 3.12 and uv. A LiveKit Cloud project is needed for real voice; a Supabase project is needed for saved records. The LiveKit CLI is used for agent operations. Docker and the Supabase CLI are optional for the full disposable local database stack; SQL tests also run without Docker through PGlite.
+
+### Run the website and synthetic examples
 
 ```powershell
-cd web
+git clone https://github.com/fikunmi-2/call-aid.git
+cd call-aid/web
 pnpm install --frozen-lockfile
 Copy-Item .env.example .env.local
+# Keep DEMO_ENABLED=false to explore without using inference credits.
 pnpm dev
 ```
 
-Open http://localhost:3000. Keep `DEMO_ENABLED=false` until the services below are configured. The landing page, example dashboard and example detail pages work immediately. Voice requests return a safe unavailable message while disabled. No sample LiveKit assistant is used.
+Open `http://localhost:3000`. Examples work without credentials; generated-record queries show a clear unavailable state until Supabase is configured. Copy env templates only on fresh setup; preserve existing configured files.
 
-### 2. Configure Supabase admission state
+### Configure actual voice and persistence
 
-Create a development Supabase project. Review migrations in `supabase/migrations/`, run `pnpm dlx supabase@3.0.0 db push --dry-run --remote` against the linked project, then apply only after approval. This workspace has migrations 001–004 applied: 003 fixes finalization and 004 enables save-before-goodbye while preserving capacity. See [migration review](supabase/MIGRATION_REVIEW.md). Do not reapply old SQL or reset the hosted database.
+Use [web/.env.example](web/.env.example) and [agent/.env.example](agent/.env.example). Examples below are placeholders; secrets are server-only and must never use a `NEXT_PUBLIC_` prefix.
 
-For a disposable local database, start Docker, then from the repository root:
+| Variable | Where | Example / purpose |
+| --- | --- | --- |
+| `APP_ORIGIN` | Web | `http://localhost:3000`; must match the browser origin |
+| `DEMO_ENABLED` | Web | `false` until database, worker and credits are ready |
+| `LIVEKIT_URL` | Web and local agent | `wss://your-project.livekit.cloud` |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | Web and local agent | Your server credentials, entered privately |
+| `LIVEKIT_AGENT_NAME` | Both | `call-aid`, identical on both sides |
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Both | Hosted URL and server-only secret/service-role key |
+| `SESSION_HMAC_SECRET` | Web | At least 32 random bytes, entered privately |
+| `REALTIME_MODEL`, `REALTIME_VOICE` | Agent | Tested model and compatible voice shown above |
 
-```powershell
-supabase start
-supabase db reset
-```
+Apply migrations in filename order to a **new development database** after review. Use the Supabase SQL Editor or link the CLI and inspect `supabase db push --dry-run` before applying. Migrations 001–004 are already applied to this project's hosted database; do not reset or reapply them. For a fresh disposable local stack, use `supabase start`, then `supabase db reset`. Never reset a hosted project as routine setup.
 
-The migrations create `private.demo_sessions` and `private.sbar_records`, with RLS and no anonymous/authenticated grants. Service-only `public` RPCs provide admission, receipt lookup, finalization, public projections and cleanup. Server credentials bypass RLS, so trusted code and SQL enforce limits and publication. No publishable key or browser database client is needed. Operational identifiers and exact timestamps stay private; reports contain generated case labels and generalized Saskatchewan dates. No region is inferred or collected in this version.
-
-Put `SUPABASE_URL` and the server secret/service-role key in **both** `web/.env.local` and `agent/.env.local`. Never use privileged keys in `NEXT_PUBLIC_*`. The SQL functions are the only database boundary used here. Keep the private schema out of Supabase's exposed-schema list.
-
-### 3. Configure LiveKit
-
-Create a LiveKit Cloud Build project. Obtain the WebSocket URL, API key and API secret. Set them in both env files. Use the same `LIVEKIT_AGENT_NAME=call-aid` for web and agent. Disable development token servers, recordings and transcript observability exports in the project; the Python code also explicitly uses `session.start(record=False)`.
-
-The tested realtime configuration is `google/gemini-3.8-live` with voice `Puck`, using `livekit.agents.inference.RealtimeModel`. See [the milestone 2 report](MILESTONE_2_REPORT.md) for actual test results and limitations. Other realtime models have different cost/voice settings; change the model/voice together after consulting the [Inference catalog](https://docs.livekit.io/agents/models/inference/). No direct model-provider API key is needed.
-
-Generate a random HMAC secret for the web server, for example with this local command, then copy its output directly into `SESSION_HMAC_SECRET` in the local env file (never into chat or Git):
+In a second terminal:
 
 ```powershell
-node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-Set `APP_ORIGIN=http://localhost:3000` locally. Set `DEMO_ENABLED=true` only when database migration, credentials and a running agent are ready. Restart Next.js after changing environment variables.
-
-### 4. Start the agent in another terminal
-
-```powershell
-cd agent
-Copy-Item .env.example .env.local
-# Fill the credentials before running dev.
+cd call-aid/agent
 uv sync --locked
+Copy-Item .env.example .env.local
+# Fill the required server credentials privately.
 uv run src/agent.py dev
 ```
 
-No separate STT/TTS plugins or model asset download is required by this realtime configuration. The agent only accepts a room with a valid, single-use server reservation. Normal browser flow creates that reservation. Sending it arbitrary rooms or the generic Playground will be rejected by design.
+Configure the web env, set `DEMO_ENABLED=true` only with available credits, then restart Next.js. Start through `/demo` so the worker receives a valid server reservation. An arbitrary Playground room is intentionally rejected. Local voice still uses cloud inference and consumes credits.
 
-Click Start Voice Session, permit the microphone, and use headphones. A cold start may take several seconds. Speak an ordinary fictional symptom description. The assistant should continue naturally, ask relevant follow-ups, refuse actual clinical advice and confirm saving only after the backend confirms it. The connected screen includes a microphone selector and input-level meter: check that the meter moves while speaking, and choose another input if it stays flat. Review/correct the recap, confirm it and let the goodbye finish. Use mute or End Session to stop.
-
-## Limits and failure behavior
-
-For repeated local testing, set `DEV_UNLIMITED_SESSIONS=true` in `web/.env.local` and run `pnpm dev`. This disables application-level start counts, daily reserved voice-time totals and monthly estimated-budget admission checks. Existing reservation history is kept and does not block this mode. The flag works only with `NODE_ENV=development`, a loopback `APP_ORIGIN`, and outside Vercel; production always uses the configured caps. No database migration is needed. It keeps authentication-free infrastructure protections, concurrency, per-call duration, idle timeout and turn limits. LiveKit's own credits/quotas still apply. Set the flag to false to resume normal metering; existing reservations then count again.
-
-Configure limits in `web/.env.local`: default one active session, 180-second conversation, connection/finalization grace, rolling start limits, daily voice allowance and a conservative per-session cost reservation. `agent/.env.local` controls idle timeout (45 seconds) and user-turn cap (20). Database reservations serialize across server instances and remain counted for budgets even after an error. Token expiry alone does not end a connected call: the worker enforces the deadline and deletes the room. The browser End endpoint also deletes it.
-
-Rate limiting uses server-keyed HMAC network/browser buckets, never raw IP storage. Hosted code trusts Vercel's overwritten `x-vercel-forwarded-for`, not arbitrary forwarding headers; local development shares one network bucket. Shared networks may hit limits collectively. IP/cookie rotation can bypass individual friction; global caps remain. All configuration checks fail closed. `DEMO_ENABLED=false` disables new calls. The active worker still enforces existing deadlines.
-
-Budget reservations are estimates, not exact token-based billing limits. Check actual project credit balance and other development usage before sharing. A busy service, missing configuration or expired credit must leave examples viewable. No automatic paid upgrades. Sanitized demonstration records expire after seven days; run the existing trusted cleanup function daily (see below).
-
-**Release accounting:** the owner confirmed Build with $0.00 Inference credits used before hosted testing; current actual balance is unverified. Existing test history contains 4,500,100 estimated reserved microdollars and 21 starts / 3,780 seconds on November 9. Verified `PRIOR_TEST_*` offsets preserve this history while allowing a fresh $2 estimated monthly allowance and the normal ten starts / 900 seconds per day. Month/day offsets automatically expire at UTC rollover; future allowances return to normal. Hosted tests consume additional reservations. No accounting reset. These are estimates; LiveKit's Build allowance is the billing backstop. Project-level Preview/Production `DEMO_ENABLED=false` remains configured; only the tested protected Preview used a deployment-specific true override. No paid service enabled.
-
-## Targeted checks
-
-From `web/`:
+### Run cloud-free checks
 
 ```powershell
+# In web/
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
 pnpm exec playwright install chromium
 pnpm test:e2e
-```
 
-The SQL tests apply the actual migration to a disposable PGlite PostgreSQL instance. They cover permissions, concurrency, one-time claims, rolling limits and non-refunded budget reservations. PGlite does not test Supabase's hosted PostgREST gateway or multi-connection lock contention; those remain hosted integration checks. Connected-microphone component regressions exercise the real device-selection hook with synthetic browser devices. Browser tests use synthetic microphone input and check anonymous navigation, SBAR fixtures, responsive overflow, unavailable service, microphone denial and unknown record IDs. The unavailable-service response is mocked so routine browser tests do not consume LiveKit credits. They do not prove real voice/model behavior. Set `PLAYWRIGHT_BASE_URL` to test an already-running local server on another port, such as http://localhost:3001.
-
-From `agent/`:
-
-```powershell
-uv run ruff check src tests
-uv run ruff format --check src tests
+# In agent/
+uv run ruff check src tests export_contract.py
+uv run ruff format --check src tests export_contract.py
 uv run pytest
 ```
 
-These cover adaptive intake, unknowns/corrections, simulated rules, grounded templates, review delivery, bounded leases and lifecycle wiring. An admitted call disables recording and deletes the room; unreserved jobs never initialize inference. Scripted tests do not establish model understanding or audio quality. `scenarios.yaml` includes synthetic headache correction, abdominal unknowns, prompt injection and clinical-advice checks for optional cloud simulation. See the milestone 2 report for the separate actual audio/browser results. Extensive automation is deferred.
+These tests use synthetic data, mocked cloud boundaries and disposable SQL state. They do not establish current inference availability. Full environment, limit, debugger, retention and troubleshooting instructions are in [Development and operations](docs/DEVELOPMENT.md).
 
-For live verification, use the actual browser path and inspect content-free status/logs. `src/agent.py` requires a trusted reservation; do not weaken admission for the debugger. The separate synthetic-only `debug_intake.py` exercises the same Assistant without database access:
+## Deployment
 
-```powershell
-cd agent
-lk agent debugger start --audio --idle-timeout 3m debug_intake.py
-lk agent debugger say "I have a headache that began gradually yesterday."
-lk agent debugger say "Actually, it began today."
-lk agent debugger stop
-```
+**Vercel:** use `web/` as Root Directory, Next.js detection, Node 24, `pnpm install --frozen-lockfile` and `pnpm build`. Enter privileged variables through Vercel's supported sensitive-env workflow. Preview and Production settings are separate. Explicitly target Preview with `vercel deploy --environment preview`; the first deployment can otherwise become production. Final production publication requires owner approval.
 
-The CLI needs the existing LiveKit project credentials/configuration as well as the agent's env file. Debugger audio uses additional inference TTS credits; its temporary logs/history must contain synthetic input only. Never enter real patient information or enable transcript exports/DEBUG logging for public visitors. Regular tests run offline; paid cloud simulations remain opt-in, outside CI.
+**LiveKit Cloud:** reuse `agent/livekit.toml` and the existing agent. The official pinned `livekit/deploy-action` uploads/builds from GitHub's hosted runner, avoiding the laptop's ISP upload restriction without disabling TLS. It is **manual `workflow_dispatch` only**, not deployment on every push. The five GitHub secrets and trigger steps are documented in [Manual LiveKit deployment](docs/LIVEKIT_GITHUB_DEPLOY.md). No additional model-provider account is required for LiveKit Inference. LiveKit injects its own runtime connection credentials; Supabase credentials use agent secrets.
 
-For a focused, synthetic closing check, use `tests/closing_probe.py` instead of `debug_intake.py`. Set `CLOSING_PROBE_OUTCOME` to `published`, `failed` or `withheld`, and optionally `CLOSING_PROBE_CONCERN` to `headache`, `cough` or `back_pain`, before starting the debugger. This harness seeds a known recap and uses a **mocked database**; it tests real-model wording, consumes inference credits and creates no Supabase records. These variables are test-only, not application configuration. Confirm the spoken recap, inspect the tool result and reply, then stop the debugger.
+**Supabase:** retain private tables, RLS and service-only RPC grants. Published JSONB records are linked one-to-one to private sessions. Configure daily trusted cleanup; expired records are filtered immediately, but scheduled deletion still needs verification. Never grant anonymous table writes or commit env files.
 
-Regenerate the shared JSON Schema, controlled value labels and synthetic fixtures after changing Pydantic contracts: from `agent/` in PowerShell, set `$env:PYTHONPATH="src"`, then run `uv run python export_contract.py`. The web validates received JSON at runtime with strict Zod models and approved templates. Python is canonical; cross-language fixtures and targeted tests detect drift. No transcript is sent through the preview channel or stored in browser storage.
+The existing deployments were not resumed, promoted or reconfigured for this documentation work. Vercel's GitHub app connection still needs owner repository authorization if automatic deployment is desired; current pushes do not auto-deploy that project.
 
-## Deployment and release
+## Current Status and Limitations
 
-Final production publication requires owner approval. No paid upgrade, domain purchase or additional deployment slot is authorized. Current verified status is in [MILESTONE_4_REPORT.md](MILESTONE_4_REPORT.md).
+Status as of **November 9, 2026**:
 
-1. Authenticate Vercel CLI (`vercel login`), inspect existing projects and link the existing [GitHub repository](https://github.com/fikunmi-2/call-aid). Inspect its Git integration before pushing `main`, since a connected production branch can auto-deploy. Configure **Root Directory = web**, **Framework = Next.js**, **Node = 24.x**, install `pnpm install --frozen-lockfile`, build `pnpm build`, default Next.js output. `.vercelignore` excludes local secrets, tools, Python source and caches.
-2. Set server environment variables separately for Preview/Production. Enter secrets through the dashboard or CLI stdin, never literal command-line values. Keep `DEV_UNLIMITED_SESSIONS=false`. Set canonical `APP_ORIGIN=https://<project>.vercel.app`. Preview alone also accepts exact Vercel-provided `VERCEL_URL`/`VERCEL_BRANCH_URL` origins; caller-controlled forwarding headers cannot authorize a site. Production accepts the configured canonical origin only.
-3. Agent `CA_5zppKdPR3z8g` is deployed in `us-east` and served the successful hosted voice test. Reuse `agent/livekit.toml`, not another create. The official `livekit/deploy-action` on GitHub's runner avoids the laptop's ISP upload restriction. Follow [the five-secret setup and manual trigger guide](docs/LIVEKIT_GITHUB_DEPLOY.md); the owner has already configured these secrets. The workflow runs only via `workflow_dispatch`; pushes do not deploy the agent. On a working trusted network the CLI equivalent is `lk agent deploy --secrets-file <private-agent-secrets-file>`. TLS remains enabled. Region is not a Canadian-residency guarantee.
-4. Keep generated `agent/livekit.toml` IDs in Git, without secrets. Use `lk agent deploy` for later updates, not another create. Configure only permitted agent secrets through `lk agent update-secrets --secrets-file <private-agent-secrets-file>` without `--overwrite`. Inspect `lk agent status`, `lk agent secrets`, `lk agent versions`, build/deployment logs and the matching `call-aid` dispatch name. Disable recording/transcript exports. No local Docker engine is available here, so a local image build is unverified.
-5. Use `vercel deploy --environment preview` explicitly. **Vercel can assign a project's first deployment to production even when `--prod` is omitted.** The initial attempt did so here before cancellation completed; the owner subsequently paused production and that state was verified. A separate protected Preview is ready. It is not a public judge release. Stop every local Python worker for hosted acceptance so it cannot satisfy dispatches. Complete an invented intake, correct/confirm recap, hear the warm saved closing, follow **View Generated Record**, and verify the same new case on `/records`. Check database confirmation, safe JSON, freshness, mobile/desktop and failure states. Unrun checks stay unverified.
-6. Present the tested preview, source commit, final limits and migration state for owner approval. Only afterward publish production, verify its canonical HTTPS origin/routes again, push reviewed commits as appropriate, and replace the pending public URL in this README/report. Do not reset hosted Supabase; migrations 001–004 are already applied and its dry run is up to date.
+| Area | Verified status |
+| --- | --- |
+| Core workflow | Implemented: voice, adaptive intake, reviewed recap, deterministic flags, validated SBAR, trusted save and console |
+| Hosted end-to-end | Passed once on a protected HTTPS Preview, using synthetic microphone audio, hosted agent and a newly saved case; local workers stopped |
+| Current inference | Owner reports included Build credits nearly exhausted. Later realtime and optional STT checks returned HTTP 429. Live voice is not currently promised |
+| Deployed agent | Existing agent Running on last inspection, version `GqvhsuGZ4Dvy`; deployment health alone does not prove model availability |
+| Public judge URL | Not released. Vercel project paused, production voice disabled; Preview remains protected |
+| Screenshots | Current local UI plus explicitly labelled archival voice/intake captures; no new inference used |
+| Current polish | Verified locally; not deployed to production by this change |
 
-Rollback: disable new sessions with `DEMO_ENABLED=false` and redeploy the web app; records/examples remain readable. Revert to a known web deployment through Vercel and use `lk agent rollback --version <known-version>` when a previous agent version exists. A first agent deployment has no earlier version. Do not roll back by resetting/deleting database data. See [official agent deployment](https://docs.livekit.io/deploy/agents/quickstart/), [secrets](https://docs.livekit.io/deploy/agents/secrets/) and [quotas](https://docs.livekit.io/deploy/admin/quotas-and-limits/).
+The repository is the primary review experience while credits are constrained. [Milestone 4](MILESTONE_4_REPORT.md) records actual deployment runs, acceptance evidence and failed/unverified checks. [Repository showcase report](docs/REPOSITORY_SHOWCASE.md) records this cleanup and its tests.
 
-Milestone 4 verified the actual HTTPS Preview → hosted agent → Supabase → new report/dashboard path with local workers stopped. Desktop/mobile page checks passed. Exact hosted farewell wording remains unverified because optional STT transcription returned 429; physical microphone/audio quality and final anonymous production access remain owner checks. See the milestone report for evidence and limitations. Local env files remain ignored. Local dev URL is http://localhost:3001; keep `APP_ORIGIN` equal to the browser URL. Worker stdout now uses content-free filtering because SDK error logs can otherwise contain rejected tool evidence even with recording off.
+Important limits:
 
-## Starter and skill provenance
+- **Research only:** no real patients, clinical validation, diagnosis, prescriptions, safety clearance or clinical follow-up. A simulated flag is a configured rule match, not an urgency assessment.
+- **Probabilistic extraction:** clarification and caller review matter. The model can miss details; approved categories deliberately sacrifice nuance. Unknown is not a negative finding.
+- **Public demonstrations:** no raw transcripts, audio recordings, names, health identifiers or exact locations in public records. Generated labels and generalized dates reduce detail but do not guarantee anonymity. Public content can be copied.
+- **Truthful outcomes:** only confirmed database saves create successful report links. Incomplete, withheld, failed and pending states remain distinct. The exact hosted farewell wording was not verified because the optional transcription check failed.
+- **Resource limits:** configurable defaults include one concurrent call, 180 seconds, idle/turn limits, two starts per ten minutes, daily caps, a $2 estimated monthly reservation allowance and `DEMO_ENABLED` kill switch. Estimated reservations are not actual billing caps. No paid subscription or automatic upgrade enabled.
+- **Verification boundaries:** browser tests use synthetic microphones; physical mobile audio, accents/noise and actual hosted outage handling remain manual checks. Daily deletion scheduling and project-wide observability settings need owner review.
 
-- Web foundation: [livekit-examples/agent-starter-react](https://github.com/livekit-examples/agent-starter-react), commit `9e1fc2f40fd7ceaccbe4a872b21765b49eefea80`. Reused dependency/config conventions and token endpoint foundation; replaced unrestricted token grants and removed unused starter features. MIT license retained in `web/LICENSE`.
-- Python foundation: [livekit-examples/agent-starter-python](https://github.com/livekit-examples/agent-starter-python), commit `228095c442fcb259c80e9786fc0d7c5534e6af46`. Adapted AgentServer entry point, uv project and Dockerfile to native realtime and server reservations. MIT license retained in `agent/LICENSE`.
-- Official [LiveKit Agent Skills](https://github.com/livekit/agent-skills), commit `e1195b497388b1aecad5dd2e9a0c9bdfbaba1878`, were installed manually by copying their skill directories into `agent/.agents/skills`, as supported by the [installation docs](https://docs.livekit.io/reference/developer-tools/agent-skills/). These are local developer tools excluded from Git; install them locally when needed. No global Codex settings were changed. The project-local CLI is 2.19.3 and installed Python SDK is 1.8.10.
+## Future Development
 
-Run `select public.cleanup_demo_records();` through a trusted maintenance connection daily (or schedule the same function in Supabase). It deletes up to 500 expired public records per run, clears old receipt/network hashes and keeps current billing-month accounting. Expired records are immediately excluded from reads even before cleanup. Never call cleanup from the browser. Initial retention is seven days; current usage caps make one daily batch sufficient.
+These are research directions, **not implemented features or approved clinical use**:
 
-Draft contracts remain schema 2.0; confirmed published records use schema 3.0 and publication policy `public-1.0`. `publication`, `record_saved` and saved recommendation text come from the SQL result, never model updates. Existing env files are sufficient: there are **no new application environment variables**. Supabase CLI login/project linking is tooling configuration only.
+- Ordinary telephone access, subject to separate design, cost and safety review.
+- Clinician-reviewed intake workflows and evaluation with qualified collaborators.
+- Secure clinical access, consent and appropriate access controls for any future healthcare system, separate from this public synthetic console.
+- Accessibility, language and speech-quality evaluation with diverse users.
 
-The ordinary GitHub workflow runs cloud-free Python, web, SQL and desktop/mobile browser checks with read-only repository permissions; [its first hosted run passed](https://github.com/fikunmi-2/call-aid/actions/runs/42703434876). The separate manual LiveKit workflow [deployed the existing agent successfully](https://github.com/fikunmi-2/call-aid/actions/runs/42703788441). Cloud simulations remain opt-in. Review [the plan](PROJECT_PLAN.md) and [Milestone 4 report](MILESTONE_4_REPORT.md) for remaining release gates. No user authentication is introduced.
+Any real patient processing or clinical deployment would require a substantially different privacy, governance and validation process. This repository does not establish readiness for it.
+
+## Origin
+
+Developed for the **University of Regina GATE Health Tech Innovation Challenge — November 2026**, with rural Saskatchewan as the initial research context.
+
+[Milestone 1](MILESTONE_1_REPORT.md) · [Milestone 2](MILESTONE_2_REPORT.md) · [Milestone 3](MILESTONE_3_REPORT.md) · [Milestone 4](MILESTONE_4_REPORT.md) · [Publication policy](PUBLICATION_UPDATE.md)
