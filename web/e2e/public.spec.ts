@@ -88,7 +88,7 @@ test("public landing to recognizable synthetic SBAR without login", async ({
   await expect(
     page.getByText("Not for medical use", { exact: false }).first(),
   ).toBeVisible();
-  await page.getByRole("link", { name: /Explore example records/ }).click();
+  await page.getByRole("link", { name: /Explore records and examples/ }).click();
   await expect(
     page.getByText("Preloaded synthetic examples", { exact: true }),
   ).toBeVisible();

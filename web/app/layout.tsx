@@ -16,6 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
         <div className="notice">
           <span className="notice-dot" /> RESEARCH PROTOTYPE{" "}
           <span className="notice-divider">/</span> Not for medical use
@@ -30,11 +33,13 @@ export default function RootLayout({
           <nav aria-label="Main navigation">
             <Link href="/demo">Voice demo</Link>
             <Link href="/records">
-              Records console <ArrowUpRight size={14} />
+              Records Console <ArrowUpRight size={14} />
             </Link>
           </nav>
         </header>
-        <main>{children}</main>
+        <main id="main-content" tabIndex={-1}>
+          {children}
+        </main>
         <footer className="shell footer">
           <span>
             Call AId <span className="muted">/ Research in conversation.</span>

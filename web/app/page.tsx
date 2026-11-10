@@ -29,11 +29,12 @@ export default function Home() {
               <Mic size={18} /> Start Voice Session <ArrowRight size={18} />
             </Link>
             <Link className="text-link" href="/records">
-              Explore example records <ArrowUpRightIcon />
+              Explore records and examples <ArrowUpRightIcon />
             </Link>
           </div>
           <p className="small muted hero-note">
-            No account. No forms. Just your browser and microphone.
+            No account. No forms. Fictional information only. Not for medical
+            use.
           </p>
         </div>
         <div className="conversation-card">

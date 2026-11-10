@@ -215,7 +215,7 @@ export function VoiceDemo() {
       {phase === "ended" && <SessionResult onSaved={clearDraft} />}
       {reportError && <p role="alert">{reportError}</p>}
       {report && <IntakePreview report={report} />}
-      <Link href="/records" className="text-link examples-link">
+      <Link href="/records#examples" className="text-link examples-link">
         Voice unavailable? Explore synthetic examples <ArrowRight size={16} />
       </Link>
     </RoomContext.Provider>

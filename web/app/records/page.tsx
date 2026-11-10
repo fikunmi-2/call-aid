@@ -38,7 +38,7 @@ export default async function Records({
         </div>
         <span className="pill">Public demonstration records</span>
       </div>
-      <section aria-labelledby="published-heading">
+      <section className="published-records" aria-labelledby="published-heading">
         <h2 id="published-heading">Published voice-session records</h2>
         <div className="record-stats">
           {(
@@ -107,8 +107,8 @@ export default async function Records({
         </nav>
         <RecordsRefresh />
       </section>
-      <div className="info-box">
-        <strong>Preloaded synthetic examples</strong>
+      <div className="info-box" id="examples">
+        <h2>Preloaded synthetic examples</h2>
         <p>
           These are curated illustrations, not saved voice sessions. They remain
           available if voice is offline and are excluded from the live record

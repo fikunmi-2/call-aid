@@ -5,6 +5,14 @@
 .record-stats strong { display: block; font-size: 2rem; }
 .record-stats span { font-size: .85rem; }
 .record-pages { display: flex; gap: 2rem; margin: 1rem 0; }
+.published-records { margin-top: 2rem; }
+.published-records > h2 { font-size: 1.5rem; }
+.info-box h2 { font-size: 1.2rem; }
+#examples { scroll-margin-top: 1.5rem; }
+.demo-fallback { margin-top: 1.25rem; }
+.demo-fallback .text-link { text-decoration: underline; }
+.skip-link { position: absolute; left: 1rem; top: -6rem; z-index: 10; padding: 1rem; background: var(--paper); border: 2px solid var(--green); }
+.skip-link:focus { top: 1rem; }
 @media(max-width: 600px) { .record-stats { grid-template-columns: repeat(2,1fr); } }
 
 .intake-preview { width: 100%; margin: 2rem 0; padding: clamp(1rem, 4vw, 2rem); border: 1px solid var(--border, #d5ded8); border-radius: 18px; background: #fff; text-align: left; }
@@ -527,6 +535,7 @@ svg {
 .tags {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
   margin: 20px 0 15px;
 }
 .tags > span {
@@ -548,6 +557,7 @@ svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 .report {
   max-width: 950px;

@@ -1,4 +1,5 @@
 import { VoiceDemo } from "@/components/voice-demo";
+import Link from "next/link";
 export default function Demo() {
   return (
     <div className="shell page demo-page">
@@ -12,6 +13,13 @@ export default function Demo() {
         Speak naturally about a fictional symptom scenario.
         <br />
         No account, form, or scenario selection needed.
+      </p>
+      <p className="demo-fallback small muted">
+        Voice depends on available demo capacity and inference credits. You can{" "}
+        <Link className="text-link" href="/records#examples">
+          explore synthetic SBAR examples
+        </Link>{" "}
+        without a microphone at any time.
       </p>
       <VoiceDemo />
       <p className="small muted">
